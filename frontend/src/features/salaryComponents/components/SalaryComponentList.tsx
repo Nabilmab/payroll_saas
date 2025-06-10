@@ -20,7 +20,7 @@ import {
 interface SalaryComponentListProps {
   components: SalaryComponent[];
   onEdit: (component: SalaryComponent) => void;
-  onDelete: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
   onToggleActive: (component: SalaryComponent) => void;
 }
 
@@ -71,7 +71,7 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
                     <Button size="sm" colorScheme="blue" onClick={() => onEdit(component)}>
                       Edit
                     </Button>
-                    <Button size="sm" colorScheme="red" onClick={() => onDelete(component.id, component.name)}>
+                    <Button size="sm" colorScheme="red" onClick={() => onDelete(component.id)}>
                       Delete
                     </Button>
                   </Box>
