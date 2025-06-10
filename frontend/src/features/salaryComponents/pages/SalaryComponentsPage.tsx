@@ -1,19 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Heading } from '@chakra-ui/react';
 import SalaryComponentList from '../components/SalaryComponentList'; // Adjust path as needed
+import { SalaryComponent } from '../../../types'; // Import the central type
 // import { fetchSalaryComponents, addSalaryComponent, updateSalaryComponent, deleteSalaryComponent } from '../api'; // Adjust path to your API functions
 
-// Define a type for salary components
-interface SalaryComponent {
-  id: string; // Or number
-  name: string;
-  type: 'earning' | 'deduction';
-  calculationType: 'fixed' | 'percentage';
-  value: number;
-  isTaxable: boolean;
-  isCalculatedInCtc: boolean;
-  // Add other relevant fields
-}
+// Define a type for salary components -- REMOVED
 
 const SalaryComponentsPage: React.FC = () => {
   const [components, setComponents] = useState<SalaryComponent[]>([]);
@@ -27,18 +18,23 @@ const SalaryComponentsPage: React.FC = () => {
       setTimeout(() => {
         resolve([
           // Sample data - replace with actual fetched data
-          { id: '1', name: 'Basic Salary', type: 'earning', calculationType: 'fixed', value: 50000, isTaxable: true, isCalculatedInCtc: true },
-          { id: '2', name: 'House Rent Allowance', type: 'earning', calculationType: 'percentage', value: 40, isTaxable: true, isCalculatedInCtc: true },
-          { id: '3', name: 'Provident Fund', type: 'deduction', calculationType: 'fixed', value: 1800, isTaxable: false, isCalculatedInCtc: true },
+          { id: '1', name: 'Basic Salary', type: 'earning', calculation_type: 'fixed', default_amount: 50000, is_taxable: true, is_system_defined: false, is_active: true },
+          { id: '2', name: 'House Rent Allowance', type: 'earning', calculation_type: 'percentage', default_amount: 40, is_taxable: true, is_system_defined: false, is_active: true },
+          { id: '3', name: 'Provident Fund', type: 'deduction', calculation_type: 'fixed', default_amount: 1800, is_taxable: false, is_system_defined: true, is_active: true },
         ]);
       }, 1000);
     });
   };
 
-  const addSalaryComponent = async (component: Omit<SalaryComponent, 'id'>): Promise<SalaryComponent> => {
+  const addSalaryComponent = async (component: Omit<SalaryComponent, 'id' | 'is_system_defined' | 'is_active'>): Promise<SalaryComponent> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const newComponent = { ...component, id: String(Date.now()) }; // Create a new ID
+        const newComponent: SalaryComponent = {
+          ...component,
+          id: String(Date.now()), // Create a new ID
+          is_system_defined: false,
+          is_active: true
+        };
         resolve(newComponent);
       }, 500);
     });
@@ -78,7 +74,7 @@ const SalaryComponentsPage: React.FC = () => {
     loadComponents();
   }, []);
 
-  const handleAdd = async (newComponentData: Omit<SalaryComponent, 'id'>) => {
+  const handleAdd = async (newComponentData: Omit<SalaryComponent, 'id' | 'is_system_defined' | 'is_active'>) => {
     setIsLoading(true);
     try {
       const addedComponent = await addSalaryComponent(newComponentData);
@@ -102,6 +98,23 @@ const SalaryComponentsPage: React.FC = () => {
       setError(null);
     } catch (err) {
       setError('Failed to update salary component.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (componentToToggle: SalaryComponent) => {
+    setIsLoading(true);
+    try {
+      const updatedComponent = { ...componentToToggle, is_active: !componentToToggle.is_active };
+      const returnedComponent = await updateSalaryComponent(updatedComponent);
+      setComponents(
+        components.map((c) => (c.id === returnedComponent.id ? returnedComponent : c))
+      );
+      setError(null);
+    } catch (err) {
+      setError('Failed to update salary component status.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -137,7 +150,7 @@ const SalaryComponentsPage: React.FC = () => {
         components={components}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onAddNew={handleAdd} // Pass the add handler
+        onToggleActive={handleToggleActive} // Add this line
       />
     </Box>
   );
