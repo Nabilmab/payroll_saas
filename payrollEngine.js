@@ -52,6 +52,80 @@ function calculatePeriodStartDate(periodEndDate, frequency) {
 
 
 /**
+ * calculateIGR
+ *
+ * Implements the 2025 Moroccan progressive income‐tax scale (“Impôt Général sur le Revenu”).
+ *
+ * Brackets (annual taxable income in MAD):
+ *    0 ‑ 40,000   → 0%
+ *    40,001 ‑ 60,000 → 10%
+ *    60,001 ‑ 80,000 → 20%
+ *    80,001 ‑ 100,000 → 30%
+ *    100,001 ‑ 180,000 → 34%
+ *    Above 180,000 → 37%
+ *
+ * We assume that `taxableBase` is already an annual figure in MAD.
+ * If you need monthly or semi‑monthly withholding, you can prorate accordingly
+ * (e.g., divide the annual taxable base into 12 or 24 before applying these brackets).
+ *
+ * @param {number} taxableBase – The annual taxable income (MAD) for this employee.
+ * @returns {number} The annual IGR owed (MAD), rounded to two decimals.
+ */
+function calculateIGR(taxableBase) {
+    let remaining = taxableBase;
+    let tax = 0;
+
+    // 1) 0 ‑ 40,000 @ 0%
+    const bracket1Cap = 40000;
+    if (remaining <= bracket1Cap) {
+        return 0.00;
+    }
+    // Move on to next bracket
+    remaining -= bracket1Cap;
+
+    // 2) 40,001 ‑ 60,000 @ 10%
+    const bracket2Cap = 20000; // (60,000 − 40,000)
+    if (remaining <= bracket2Cap) {
+        tax += remaining * 0.10;
+        return parseFloat(tax.toFixed(2));
+    }
+    tax += bracket2Cap * 0.10;
+    remaining -= bracket2Cap;
+
+    // 3) 60,001 ‑ 80,000 @ 20%
+    const bracket3Cap = 20000; // (80,000 − 60,000)
+    if (remaining <= bracket3Cap) {
+        tax += remaining * 0.20;
+        return parseFloat(tax.toFixed(2));
+    }
+    tax += bracket3Cap * 0.20;
+    remaining -= bracket3Cap;
+
+    // 4) 80,001 ‑ 100,000 @ 30%
+    const bracket4Cap = 20000; // (100,000 − 80,000)
+    if (remaining <= bracket4Cap) {
+        tax += remaining * 0.30;
+        return parseFloat(tax.toFixed(2));
+    }
+    tax += bracket4Cap * 0.30;
+    remaining -= bracket4Cap;
+
+    // 5) 100,001 ‑ 180,000 @ 34%
+    const bracket5Cap = 80000; // (180,000 − 100,000)
+    if (remaining <= bracket5Cap) {
+        tax += remaining * 0.34;
+        return parseFloat(tax.toFixed(2));
+    }
+    tax += bracket5Cap * 0.34;
+    remaining -= bracket5Cap;
+
+    // 6) Above 180,000 @ 37%
+    tax += remaining * 0.37;
+    return parseFloat(tax.toFixed(2));
+}
+
+
+/**
  * Processes payroll for a given tenant and pay schedule.
  * @param {string} tenantId - The ID of the tenant.
  * @param {string} payScheduleId - The ID of the pay schedule to run.
@@ -154,13 +228,15 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
                     baseSalaryAmountForPercentageCalcs = parseFloat(baseSalarySetting.salaryComponent.amount);
                 }
             }
-            // This baseSalaryAmountForPercentageCalcs is a simplification.
-            // A more robust system might sum up all components flagged as 'contributes_to_percentage_base'.
+            // At this point, baseSalaryAmountForPercentageCalcs holds the fixed base salary (annual or monthly),
+            // depending on how you’ve chosen to store it. If you store it monthly, you should annualize it:
+            // e.g. const taxableBaseAnnual = baseSalaryAmountForPercentageCalcs * 12;
+            // For simplicity below, we'll assume `baseSalaryAmountForPercentageCalcs` is already the annual figure.
+            const taxableBaseAnnual = baseSalaryAmountForPercentageCalcs;
 
             // --- B. Iterate over employee's salary settings ---
             for (const setting of employeeSettings) {
                 const component = setting.salaryComponent;
-                // Component might be null if the include failed or data is inconsistent
                 if (!component) {
                     console.warn(`      - Warning: Skipping setting for employee ${employee.id} due to missing component data.`);
                     continue;
@@ -177,53 +253,50 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
                     } else {
                         console.warn(`        - Warning: Fixed component '${component.name}' for employee ${employee.id} has no amount defined.`);
                     }
+
                 } else if (component.calculation_type === 'percentage') {
-                    const percentage = parseFloat(component.percentage || setting.percentage || 0); // Prioritize component's % for system ones
+                    const percentage = parseFloat(component.percentage || setting.percentage || 0);
                     // For Phase 2, assume system % components are based on `baseSalaryAmountForPercentageCalcs`
-                    // A more advanced system would use `component.basedOnComponentId` or a `percentage_base_definition`
-                    itemAmount = baseSalaryAmountForPercentageCalcs * (percentage / 100);
-                    console.log(`        - Percentage (${percentage}%) of base (${baseSalaryAmountForPercentageCalcs}) = ${itemAmount}`);
+                    itemAmount = taxableBaseAnnual * (percentage / 100);
+                    console.log(`        - Percentage (${percentage}%) of base (${taxableBaseAnnual}) = ${itemAmount}`);
 
                 } else if (component.calculation_type === 'formula') {
-                    // Placeholder for system-defined formula components (e.g., IGR)
-                    // This requires a dedicated formula evaluation engine.
-                    if (component.name.toLowerCase().includes('igr')) {
-                        // itemAmount = calculateIGR(taxableBase, employeeSpecifics, taxBrackets);
-                        // For now, let's assume it's a fixed placeholder amount or zero
-                        console.warn(`        - Formula component '${component.name}' requires specific calculation. Placeholder used.`);
-                        itemAmount = 0; // Replace with actual IGR calculation
+                    // Here we detect IGR specifically
+                    if (component.name.toLowerCase().includes('igr') || component.name.toLowerCase().includes('impôt général sur le revenu')) {
+                        // Call calculateIGR using annual taxable base
+                        itemAmount = calculateIGR(taxableBaseAnnual);
+                        console.log(`        - IGR (formula) on base ${taxableBaseAnnual} = ${itemAmount}`);
                     } else {
                         console.warn(`        - Generic formula component '${component.name}' - logic not implemented.`);
                     }
+
                 } else {
                     console.warn(`        - Unsupported calculation_type '${component.calculation_type}' for component '${component.name}'.`);
                 }
 
                 itemAmount = parseFloat(itemAmount.toFixed(2));
 
-                // Add to payslip items if amount is not zero (or if you want to show zero-amount items)
-                if (itemAmount !== 0 || true) { // Change `true` to `false` to hide zero items
-                     payslipItemsData.push({
-                        tenantId, // tenantId for the PayslipItem itself
-                        // payslipId will be set after Payslip is created
-                        componentId: component.id,
-                        description: component.name,
-                        type: component.type,
-                        amount: itemAmount,
-                    });
-                }
+                // Add to payslip items (even if zero, for transparency)
+                payslipItemsData.push({
+                    tenantId, // tenantId for the PayslipItem itself
+                    componentId: component.id,
+                    description: component.name,
+                    type: component.type,
+                    amount: itemAmount,
+                });
 
                 // Accumulate totals for the employee's payslip
                 if (component.type === 'earning') {
                     grossPayEmployee += itemAmount;
                 } else if (component.type === 'deduction') {
-                    // Simple distinction for now: if 'taxable' is true, it's a tax.
-                    // Or better, if component.name includes "Tax" or "IGR".
-                    // A dedicated 'component_category' like 'TAX' would be best.
-                    if (component.name.toLowerCase().includes('igr') || component.name.toLowerCase().includes('tax') || component.name.toLowerCase().includes('cnss') || component.name.toLowerCase().includes('amo')) {
-                         taxesEmployee += itemAmount; // Grouping statutory deductions as "taxes" for simplicity
+                    // If component is IGR or any tax (CNSS/AMO etc.), group under `taxesEmployee`
+                    if (component.name.toLowerCase().includes('igr') ||
+                        component.name.toLowerCase().includes('tax') ||
+                        component.name.toLowerCase().includes('cnss') ||
+                        component.name.toLowerCase().includes('amo')) {
+                        taxesEmployee += itemAmount;
                     } else {
-                        deductionsEmployee += itemAmount; // Other voluntary/company deductions
+                        deductionsEmployee += itemAmount;
                     }
                 }
             } // End of settings loop for an employee
@@ -267,13 +340,10 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
 
         await payrollRun.update({
             totalGrossPay: totalGrossPayRun,
-            totalDeductions: totalDeductionsRun, // Storing non-tax deductions separately
-            // You might add a total_taxes field to PayrollRun model if needed
-            // For now, totalDeductions on PayrollRun could represent sum of all deductions (tax + non-tax)
-            // Let's adjust to sum them up for PayrollRun.totalDeductions
+            // Store overall deductions (tax + non-tax) in one field, if that’s how you want to track it:
             totalDeductions: parseFloat((totalDeductionsRun + totalTaxesRun).toFixed(2)),
             totalNetPay: totalNetPayRun,
-            status: 'completed', // Or 'pending_review'
+            status: 'completed',
             total_employees: activeEmployees.length
         }, { transaction });
         console.log(`  - PayrollRun ID: ${payrollRun.id} updated. Gross: ${totalGrossPayRun}, Deductions (incl. tax): ${(totalDeductionsRun + totalTaxesRun).toFixed(2)}, Net: ${totalNetPayRun}`);
@@ -284,7 +354,7 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
         return { payrollRun, payslips: createdPayslips };
 
     } catch (error) {
-        if (transaction.finished !== 'commit' && transaction.finished !== 'rollback') { // Check if not already committed or rolled back
+        if (transaction.finished !== 'commit' && transaction.finished !== 'rollback') {
             await transaction.rollback();
         }
         console.error('❌ Error during payroll processing. Transaction potentially rolled back.', error);
@@ -292,4 +362,4 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
     }
 }
 
-module.exports = { processPayroll, calculatePeriodStartDate }; // Exporting helper too
+module.exports = { processPayroll, calculatePeriodStartDate, calculateIGR };
