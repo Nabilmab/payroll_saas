@@ -102,6 +102,21 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    component_code: { // For specific system components like 'SALBASE', 'IGR_PRELEV', 'CNSS_COT', 'AMO_COT'
+      type: DataTypes.STRING,
+      allowNull: true, // Can be null for tenant-defined components
+      unique: true, // Ensures system codes are unique if provided
+    },
+    is_cnss_subject: { // Does this component contribute to the CNSS taxable base?
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    is_amo_subject: { // Does this component contribute to the AMO taxable base?
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
     // order: { // For display or calculation order
     //   type: DataTypes.INTEGER,
     //   allowNull: true,

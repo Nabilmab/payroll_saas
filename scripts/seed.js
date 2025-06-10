@@ -90,7 +90,7 @@ const departmentsData = [
  */
 const employeesData = [
   { firstName: "Ahmed", lastName: "Bennani", email: "dev.ahmed@techsolutions.ma", phoneNumber: "0612345678", dateOfBirth: new Date("1990-05-15"), address: "12 Rue de la Liberté, Casablanca", hireDate: new Date("2022-01-10"), jobTitle: "Développeur Senior", departmentName: "Développement Logiciel", tenantName: "TechSolutions SARL", managerEmail: "admin@techsolutions.ma" },
-  { firstName: "Fatima", lastName: "Zahra", email: "manager.rh@techsolutions.ma", phoneNumber: "0698765432", dateOfBirth: new Date("1985-11-20"), address: "45 Avenue Hassan II, Rabat", hireDate: new Date("2020-03-01"), jobTitle: "Responsable RH et Comptabilité", departmentName: "Ressources Humaines", tenantName: "TechSolutions SARL", managerEmail: null }, // No manager for top RH manager or make admin manager?
+  { firstName: "Fatima", lastName: "Zahra", email: "manager.rh@techsolutions.ma", phoneNumber: "0698765432", dateOfBirth: new Date("1985-11-20"), address: "45 Avenue Hassan II, Rabat", hireDate: new Date("2020-03-01"), jobTitle: "Responsable RH et Comptabilité", departmentName: "Ressources Humaines", tenantName: "TechSolutions SARL", managerEmail: null },
   { firstName: "Fatima", lastName: "El Fassi", email: "artisan.fatima@artisanatmaroc.ma", phoneNumber: "0655554433", dateOfBirth: new Date("1978-03-25"), address: "7 Derb Lihoudi, Fès", hireDate: new Date("2015-06-01"), jobTitle: "Artisane Principale", departmentName: "Production Artisanale", tenantName: "Artisanat Marocain Coop", managerEmail: "admin@artisanatmaroc.ma" },
   { firstName: "Youssef", lastName: "Alaoui", email: "youssef.marketing@artisanatmaroc.ma", phoneNumber: "0622334455", dateOfBirth: new Date("1992-07-12"), address: "10 Rue Souika, Marrakech", hireDate: new Date("2023-01-20"), jobTitle: "Spécialiste Marketing", departmentName: "Ventes et Marketing", tenantName: "Artisanat Marocain Coop", managerEmail: "admin@artisanatmaroc.ma" },
   { firstName: "Youssef", lastName: "Tazi", email: "analyste.youssef@sfalmaghrib.ma", phoneNumber: "0677889900", dateOfBirth: new Date("1995-09-03"), address: "33 Boulevard Mohammed V, Agadir", hireDate: new Date("2024-02-01"), jobTitle: "Analyste Financier Junior", departmentName: "Analyse Financière", tenantName: "Services Financiers Al Maghrib", managerEmail: "directeur.financier@sfalmaghrib.ma" },
@@ -106,24 +106,33 @@ const employeesData = [
  * @property {number} [amount] - Required if calculation_type is 'fixed'
  * @property {number} [percentage] - Required if calculation_type is 'percentage'
  * @property {boolean} is_taxable
+ * @property {string|null} component_code
+ * @property {boolean} is_cnss_subject
+ * @property {boolean} is_amo_subject
+ * @property {number|null} payslip_display_order
  * @property {SalaryComponent?} instance - Will store the Sequelize instance.
  */
 const salaryComponentsData = [
   // --- TechSolutions SARL ---
-  { name: "Salaire de Base", tenantName: "TechSolutions SARL", type: "earning", calculation_type: "fixed", is_taxable: true },
-  { name: "Indemnité de Transport", tenantName: "TechSolutions SARL", type: "earning", calculation_type: "fixed", amount: 500, is_taxable: false },
-  { name: "CNSS", tenantName: "TechSolutions SARL", type: "deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false },
-  { name: "AMO", tenantName: "TechSolutions SARL", type: "deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false },
+  { name: "Salaire de Base", tenantName: "TechSolutions SARL", type: "earning", calculation_type: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
+  { name: "Indemnité de Transport", tenantName: "TechSolutions SARL", type: "earning", calculation_type: "fixed", amount: 500, is_taxable: false, component_code: 'TRANSPORT_ALLOWANCE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 10 },
+  { name: "CNSS", tenantName: "TechSolutions SARL", type: "deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
+  { name: "AMO", tenantName: "TechSolutions SARL", type: "deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
+  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "TechSolutions SARL", type: "deduction", calculation_type: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
 
   // --- Artisanat Marocain Coop ---
-  { name: "Salaire de Base", tenantName: "Artisanat Marocain Coop", type: "earning", calculation_type: "fixed", is_taxable: true },
-  { name: "Prime de Rendement", tenantName: "Artisanat Marocain Coop", type: "earning", calculation_type: "fixed", amount: 1000, is_taxable: true },
-  { name: "CNSS", tenantName: "Artisanat Marocain Coop", type: "deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false },
+  { name: "Salaire de Base", tenantName: "Artisanat Marocain Coop", type: "earning", calculation_type: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
+  { name: "Prime de Rendement", tenantName: "Artisanat Marocain Coop", type: "earning", calculation_type: "fixed", amount: 1000, is_taxable: true, component_code: null, is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
+  { name: "CNSS", tenantName: "Artisanat Marocain Coop", type: "deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
+  { name: "AMO", tenantName: "Artisanat Marocain Coop", type: "deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
+  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Artisanat Marocain Coop", type: "deduction", calculation_type: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
 
   // --- Services Financiers Al Maghrib ---
-  { name: "Salaire de Base", tenantName: "Services Financiers Al Maghrib", type: "earning", calculation_type: "fixed", is_taxable: true },
-  { name: "Bonus de Performance", tenantName: "Services Financiers Al Maghrib", type: "earning", calculation_type: "percentage", percentage: 10.00, is_taxable: true },
-  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Services Financiers Al Maghrib", type: "deduction", calculation_type: "formula", is_taxable: false },
+  { name: "Salaire de Base", tenantName: "Services Financiers Al Maghrib", type: "earning", calculation_type: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
+  { name: "Bonus de Performance", tenantName: "Services Financiers Al Maghrib", type: "earning", calculation_type: "percentage", percentage: 10.00, is_taxable: true, component_code: null, is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
+  { name: "CNSS", tenantName: "Services Financiers Al Maghrib", type: "deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
+  { name: "AMO", tenantName: "Services Financiers Al Maghrib", type: "deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
+  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Services Financiers Al Maghrib", type: "deduction", calculation_type: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
 ];
 
 /**
@@ -157,7 +166,7 @@ const paySchedulesData = [
   {
     name: "Paiement Hebdomadaire Stagiaires",
     frequency: "weekly",
-    pay_period_start_day: 1, // This entry uses pay_period_start_day instead of pay_day_of_month
+    pay_period_start_day: 1,
     tenantName: "TechSolutions SARL"
   }
 ];
@@ -169,11 +178,10 @@ async function seedTenants() {
   console.log('Seeding tenants...');
   for (const tenantData of tenantsData) {
     const [tenant, created] = await Tenant.findOrCreate({
-      where: { schema_name: tenantData.schema_name }, // Keep using schema_name as the unique identifier
-      defaults: tenantData, // Use the concise tenantData for defaults
+      where: { schema_name: tenantData.schema_name },
+      defaults: tenantData,
     });
-    tenantData.instance = tenant; // Store instance for later use
-    // Ensure logging reflects the use of schema_name, which it likely already does from the previous subtask.
+    tenantData.instance = tenant;
     if (created) console.log(`Tenant '${tenant.name}' created with schema '${tenant.schema_name}'.`);
     else console.log(`Tenant '${tenant.name}' with schema '${tenant.schema_name}' already exists.`);
   }
@@ -186,7 +194,7 @@ async function seedRoles() {
       console.error(`Tenant instance for ${tenantData.name} (schema: ${tenantData.schema_name}) not found. Skipping roles.`);
       continue;
     }
-    for (const roleData of rolesData) { // Using the generic rolesData for each tenant
+    for (const roleData of rolesData) {
       const [role, created] = await Role.findOrCreate({
         where: { name: roleData.name, tenantId: tenantData.instance.id },
         defaults: {
@@ -195,8 +203,6 @@ async function seedRoles() {
           tenantId: tenantData.instance.id,
         },
       });
-      // Storing role instances might be complex if rolesData is reused.
-      // Instead, we'll fetch them as needed in seedUsers.
       if (created) console.log(`Role '${role.name}' for tenant '${tenantData.instance.name}' (schema: ${tenantData.instance.schema_name}) created.`);
       else console.log(`Role '${role.name}' for tenant '${tenantData.instance.name}' (schema: ${tenantData.instance.schema_name}) already exists.`);
     }
@@ -206,21 +212,21 @@ async function seedRoles() {
 async function seedUsers() {
   console.log('Seeding users...');
   for (const userData of usersData) {
-    const tenant = tenantsData.find(t => t.name === userData.tenantName)?.instance; // Assuming tenantName in usersData still refers to the 'name' property
+    const tenant = tenantsData.find(t => t.name === userData.tenantName)?.instance;
     if (!tenant) {
       console.error(`Tenant '${userData.tenantName}' not found for user '${userData.email}'. Skipping.`);
       continue;
     }
 
     const [user, created] = await User.findOrCreate({
-      where: { email: userData.email }, // Email is globally unique as per model definition
+      where: { email: userData.email },
       defaults: {
         first_name: userData.firstName,
         last_name: userData.lastName,
         email: userData.email,
-        password_hash: userData.password, // As per previous instruction for User model
-        tenantId: tenant.id, // Corrected to camelCase
-        status: userData.status || 'active', // Default to 'active' if not provided
+        password_hash: userData.password,
+        tenantId: tenant.id,
+        status: userData.status || 'active',
       },
     });
     userData.instance = user;
@@ -228,18 +234,17 @@ async function seedUsers() {
     if (created) console.log(`User '${user.email}' (Name: ${user.first_name} ${user.last_name}) created.`);
     else console.log(`User '${user.email}' (Name: ${user.first_name} ${user.last_name}) already exists.`);
 
-    // Assign roles
     if (userData.roleNames && userData.roleNames.length > 0) {
       const rolesToAssign = await Role.findAll({
         where: {
           name: userData.roleNames,
-          tenantId: tenant.id, // Ensure roles are fetched for the correct tenant (camelCase)
+          tenantId: tenant.id,
         },
       });
       if (rolesToAssign.length !== userData.roleNames.length) {
         console.warn(`Not all roles (${userData.roleNames.join(', ')}) found for user '${userData.email}' in tenant '${tenant.name}' (schema: ${tenant.schema_name}). Found: ${rolesToAssign.map(r => r.name).join(', ')}`);
       }
-      await user.setRoles(rolesToAssign); // setRoles handles the UserRole join table
+      await user.setRoles(rolesToAssign);
       console.log(`Set roles for user '${user.email}' to: ${rolesToAssign.map(r => r.name).join(', ')} for tenant '${tenant.name}' (schema: ${tenant.schema_name})`);
     }
   }
@@ -248,23 +253,18 @@ async function seedUsers() {
 async function seedDepartments() {
   console.log('Seeding departments...');
   for (const deptData of departmentsData) {
-    const tenant = tenantsData.find(t => t.name === deptData.tenantName)?.instance; // Assuming tenantName in departmentsData still refers to the 'name' property
+    const tenant = tenantsData.find(t => t.name === deptData.tenantName)?.instance;
     if (!tenant) {
       console.error(`Tenant '${deptData.tenantName}' not found for department '${deptData.name}'. Skipping.`);
       continue;
     }
 
-    // Manager assignment for departments is removed as per instruction (Department model does not have managerId field)
-    // const managerUser = usersData.find(u => u.email === deptData.managerEmail && u.tenantName === deptData.tenantName)?.instance;
-    // let managerId = managerUser ? managerUser.id : null;
-
     const [department, created] = await Department.findOrCreate({
       where: { name: deptData.name, tenantId: tenant.id },
       defaults: {
         name: deptData.name,
-        description: deptData.description || null, // Add description if available in deptData
+        description: deptData.description || null,
         tenantId: tenant.id,
-        // managerId: managerId, // Removed as Department model does not have managerId
       },
     });
     deptData.instance = department;
@@ -275,27 +275,26 @@ async function seedDepartments() {
 
 async function seedEmployees() {
   console.log('Seeding employees with two-pass approach for managers...');
-  const employeeInstanceMap = {}; // To store created employee instances, keyed by email
+  const employeeInstanceMap = {};
 
-  // First Pass: Create all employees without reportingManagerId
   console.log('--- Starting Employee Creation Pass (Pass 1) ---');
-  for (const tenantData of tenantsData) { // Iterate through tenants
+  for (const tenantData of tenantsData) {
     const tenant = tenantData.instance;
     if (!tenant) {
       console.error(`Tenant instance for ${tenantData.name} (schema: ${tenantData.schema_name}) not found. Skipping employees for this tenant.`);
       continue;
     }
 
-    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name); // Assuming tenantName in employeesData still refers to the 'name' property
+    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name);
 
     for (const empData of tenantEmployeesData) {
-      const department = departmentsData.find(d => d.name === empData.departmentName && d.tenantName === tenant.name)?.instance; // Assuming tenantName in departmentsData still refers to the 'name' property
+      const department = departmentsData.find(d => d.name === empData.departmentName && d.tenantName === tenant.name)?.instance;
       if (!department) {
         console.error(`Department '${empData.departmentName}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) not found for employee '${empData.email}'. Skipping.`);
         continue;
       }
 
-      const user = usersData.find(u => u.email === empData.email && u.tenantName === tenant.name)?.instance; // Assuming tenantName in usersData still refers to the 'name' property
+      const user = usersData.find(u => u.email === empData.email && u.tenantName === tenant.name)?.instance;
       if (!user) {
         console.error(`User with email '${empData.email}' for employee not found in tenant '${tenant.name}' (schema: ${tenant.schema_name}). Skipping employee.`);
         continue;
@@ -310,11 +309,10 @@ async function seedEmployees() {
         address: empData.address || null,
         hire_date: empData.hireDate ? new Date(empData.hireDate) : null,
         job_title: empData.jobTitle || null,
-        status: empData.status || 'active', // Assuming 'status' might be in empData
+        status: empData.status || 'active',
         tenantId: tenant.id,
         departmentId: department.id,
         userId: user.id,
-        // reportingManagerId is NOT set in the first pass
       };
 
       const [employee, created] = await Employee.findOrCreate({
@@ -327,41 +325,37 @@ async function seedEmployees() {
       } else {
         console.log(`Employee ${employee.first_name} ${employee.last_name} (${employee.email}) already exists for tenant ${tenant.name} (schema: ${tenant.schema_name})`);
       }
-      // Store instance using a key that uniquely identifies the employee within the context of the seed data (email + tenantName for safety, though email is globally unique for users/employees here)
-      employeeInstanceMap[`${employee.email}_${tenant.name}`] = employee; // Keyed by tenant name for consistency, though schema_name is the new unique ID for tenants
-      empData.instance = employee; // also keep it on empData for reference if needed, though map is primary for lookup
+      employeeInstanceMap[`${employee.email}_${tenant.name}`] = employee;
+      empData.instance = employee;
     }
   }
   console.log('--- Finished Employee Creation Pass (Pass 1) ---');
 
-  // Second Pass: Update employees with their reportingManagerId
   console.log('--- Starting Employee Manager Linking Pass (Pass 2) ---');
-  for (const tenantData of tenantsData) { // Iterate through tenants again
+  for (const tenantData of tenantsData) {
     const tenant = tenantData.instance;
     if (!tenant) {
       console.error(`Tenant instance for ${tenantData.name} (schema: ${tenantData.schema_name}) not found during manager linking pass. Skipping.`);
       continue;
     }
-    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name); // Assuming tenantName in employeesData still refers to the 'name' property
+    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name);
 
     for (const empData of tenantEmployeesData) {
-      if (empData.managerEmail) { // 'managerEmail' instead of 'reportingManagerEmail'
-        const currentEmployee = employeeInstanceMap[`${empData.email}_${tenant.name}`]; // Keyed by tenant name
-        // Manager must be within the same tenant
-        const manager = employeeInstanceMap[`${empData.managerEmail}_${tenant.name}`]; // Keyed by tenant name
+      if (empData.managerEmail) {
+        const currentEmployee = employeeInstanceMap[`${empData.email}_${tenant.name}`];
+        const manager = employeeInstanceMap[`${empData.managerEmail}_${tenant.name}`];
 
         if (currentEmployee && manager) {
           if (currentEmployee.id === manager.id) {
             console.warn(`Employee ${currentEmployee.email} (Tenant: ${tenant.name}, schema: ${tenant.schema_name}) cannot be their own manager. Skipping self-assignment.`);
             continue;
           }
-          currentEmployee.reportingManagerId = manager.id; // Ensure Employee model has 'reportingManagerId'
+          currentEmployee.reportingManagerId = manager.id;
           await currentEmployee.save();
           console.log(`Linked employee ${currentEmployee.email} to manager ${manager.email} for tenant ${tenant.name} (schema: ${tenant.schema_name})`);
         } else if (!manager) {
           console.warn(`Manager with email ${empData.managerEmail} (Tenant: ${tenant.name}, schema: ${tenant.schema_name}) not found in instance map for employee ${empData.email}.`);
         } else if (!currentEmployee) {
-          // This case should ideally not happen if Pass 1 is correct
           console.warn(`Employee with email ${empData.email} (Tenant: ${tenant.name}, schema: ${tenant.schema_name}) was not found in the instance map during Pass 2.`);
         }
       }
@@ -384,46 +378,50 @@ async function seedSalaryComponents() {
         tenantId: tenant.id,
         type: scData.type,
         calculation_type: scData.calculation_type,
-        amount: scData.amount || null, // Model should handle default if not applicable
-        percentage: scData.percentage || null, // Model should handle default if not applicable
+        amount: scData.amount || null,
+        percentage: scData.percentage || null,
         is_taxable: scData.is_taxable,
-        // based_on_component_id: null, // Reset or handle based on new structure if needed
-        // formula: null, // Reset or handle based on new structure if needed
+        // New fields added here
+        component_code: scData.component_code || null,
+        is_cnss_subject: typeof scData.is_cnss_subject === 'boolean' ? scData.is_cnss_subject : false,
+        is_amo_subject: typeof scData.is_amo_subject === 'boolean' ? scData.is_amo_subject : false,
+        payslip_display_order: scData.payslip_display_order || null
     };
-    // Example of how based_on_component_id or formula might be handled if they were in scData
-    // if (scData.based_on_component_name) { ... }
-    // if (scData.formula_string) { defaults.formula = scData.formula_string; }
-
 
     const [component, created] = await SalaryComponent.findOrCreate({
-      where: { name: scData.name, tenantId: tenant.id, type: scData.type }, // Added type to where clause for more uniqueness
+      where: {
+        name: scData.name,
+        tenantId: tenant.id,
+        type: scData.type,
+        // Adding component_code to where clause if it's meant to be part of uniqueness for system components
+        // However, for tenant-defined components, component_code might be null.
+        // A more robust unique key might be tenantId + name + type (or tenantId + component_code if code is always unique per tenant for system ones)
+        // For now, keeping it as original: name, tenantId, type
+      },
       defaults: defaults,
     });
     scData.instance = component;
-    if (created) console.log(`SalaryComponent '${component.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) created.`);
-    else console.log(`SalaryComponent '${component.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) already exists.`);
+    if (created) console.log(`SalaryComponent '${component.name}' (Code: ${component.component_code || 'N/A'}) for tenant '${tenant.name}' (schema: ${tenant.schema_name}) created.`);
+    else console.log(`SalaryComponent '${component.name}' (Code: ${component.component_code || 'N/A'}) for tenant '${tenant.name}' (schema: ${tenant.schema_name}) already exists.`);
   }
 }
 
 async function seedPaySchedules() {
   console.log('Seeding pay schedules...');
   for (const psData of paySchedulesData) {
-    const tenant = tenantsData.find(t => t.name === psData.tenantName)?.instance; // Assuming tenantName in paySchedulesData still refers to the 'name' property
+    const tenant = tenantsData.find(t => t.name === psData.tenantName)?.instance;
     if (!tenant) {
       console.error(`Tenant '${psData.tenantName}' not found for pay schedule '${psData.name}'. Skipping.`);
       continue;
     }
     const [schedule, created] = await PaySchedule.findOrCreate({
-      where: { name: psData.name, tenantId: tenant.id }, // Assuming name and tenantId define uniqueness
+      where: { name: psData.name, tenantId: tenant.id },
       defaults: {
         name: psData.name,
         tenantId: tenant.id,
         frequency: psData.frequency,
         pay_day_of_month: psData.pay_day_of_month || null,
         pay_period_start_day: psData.pay_period_start_day || null,
-        // pay_day_of_week: psData.pay_day_of_week || null, // if you add this to your model
-        // calculation_day_of_month: psData.calculation_day_of_month || null, // if you add this
-        // calculation_day_of_week: psData.calculation_day_of_week || null, // if you add this
       },
     });
     psData.instance = schedule;
@@ -441,43 +439,27 @@ async function seedDatabase() {
     await sequelize.authenticate();
     console.log('Database connection established.');
 
-    // Consider if sync is needed here or handled by migrations.
-    // Using { force: false } to avoid data loss, { alter: true } can be used for development.
-    // For a production-like seed, migrations should handle schema.
-    // Let's assume migrations are separate and tables exist. If not, uncomment:
-    // await sequelize.sync({ alter: true }); // or { force: false } if you are sure schema is up-to-date
-    // console.log('Database synchronized.');
-
     await seedTenants();
-    await seedRoles(); // Roles depend on Tenants
-    await seedUsers(); // Users depend on Tenants and Roles
-    await seedDepartments(); // Departments depend on Tenants and potentially Users (for manager_id)
-    await seedEmployees(); // Employees depend on Tenants, Departments, and Users. Managers are Employees.
-    await seedSalaryComponents(); // Depend on Tenants
-    await seedPaySchedules(); // Depend on Tenants
+    await seedRoles();
+    await seedUsers();
+    await seedDepartments();
+    await seedEmployees();
+    await seedSalaryComponents();
+    await seedPaySchedules();
 
     console.log('Database seeding completed successfully.');
   } catch (error) {
     console.error('Error seeding database:', error);
-    process.exitCode = 1; // Indicate failure
+    process.exitCode = 1;
   } finally {
-    // It's often better to let the calling process manage connection closing.
-    // If this script is run standalone and meant to exit, then close.
-    // await sequelize.close();
-    // console.log('Database connection closed.');
+    // await sequelize.close(); // Usually closed by the calling process or when script exits
   }
 }
 
-// If the script is run directly (node scripts/seed.js)
 if (require.main === module) {
   (async () => {
-    // Sync database schema before seeding.
-    // force: true will drop and recreate tables. Use with extreme caution in dev, never in prod.
-    // alter: true will attempt to make non-destructive changes.
-    // In a real app, migrations (e.g., using Sequelize CLI) are preferred for schema management.
-    // For this seed script, we'll use alter:true to ensure tables are created/updated if they don't match models.
     try {
-      await sequelize.sync({ alter: true }); // Ensure schema is up-to-date or created
+      await sequelize.sync({ alter: true });
       console.log('Database schema synchronized.');
       await seedDatabase();
     } catch (syncError) {
@@ -490,7 +472,6 @@ if (require.main === module) {
   })();
 }
 
-// Export for potential programmatic use (e.g. testing, or if called by another script)
 module.exports = {
   seedDatabase,
   tenantsData,
