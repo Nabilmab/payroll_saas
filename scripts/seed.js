@@ -33,19 +33,24 @@ const rolesData = [
 /**
  * @typedef {Object} UserData
  * @property {string} email - The email address of the user.
+ * @property {string} firstName - The first name of the user.
+ * @property {string} lastName - The last name of the user.
  * @property {string} password - The plain text password.
  * @property {string} tenantName - The name of the tenant this user belongs to.
  * @property {string[]} roleNames - An array of role names assigned to this user.
+ * @property {string} [status='active'] - The status of the user.
  * @property {User?} instance - Will store the Sequelize instance.
  */
 const usersData = [
-  { email: "admin@techsolutions.ma", password: "password123", tenantName: "TechSolutions SARL", roleNames: ["Admin"] },
-  { email: "manager.rh@techsolutions.ma", password: "password123", tenantName: "TechSolutions SARL", roleNames: ["Manager", "Comptable"] },
-  { email: "dev.ahmed@techsolutions.ma", password: "password123", tenantName: "TechSolutions SARL", roleNames: ["Employé"] },
-  { email: "admin@artisanatmaroc.ma", password: "password123", tenantName: "Artisanat Marocain Coop", roleNames: ["Admin", "Manager"] },
-  { email: "artisan.fatima@artisanatmaroc.ma", password: "password123", tenantName: "Artisanat Marocain Coop", roleNames: ["Employé"] },
-  { email: "directeur.financier@sfalmaghrib.ma", password: "password123", tenantName: "Services Financiers Al Maghrib", roleNames: ["Admin", "Manager", "Comptable"] },
-  { email: "analyste.youssef@sfalmaghrib.ma", password: "password123", tenantName: "Services Financiers Al Maghrib", roleNames: ["Employé"] },
+  // For users who are also in employeesData, firstName and lastName should ideally match.
+  // For users not in employeesData (e.g. pure system admins), names can be generic.
+  { firstName: "Admin", lastName: "TechSol", email: "admin@techsolutions.ma", password: "password123", tenantName: "TechSolutions SARL", roleNames: ["Admin"], status: "active" },
+  { firstName: "Fatima", lastName: "Zahra", email: "manager.rh@techsolutions.ma", password: "password123", tenantName: "TechSolutions SARL", roleNames: ["Manager", "Comptable"], status: "active" }, // Matches employeesData
+  { firstName: "Ahmed", lastName: "Bennani", email: "dev.ahmed@techsolutions.ma", password: "password123", tenantName: "TechSolutions SARL", roleNames: ["Employé"], status: "active" }, // Matches employeesData
+  { firstName: "Admin", lastName: "Artisanat", email: "admin@artisanatmaroc.ma", password: "password123", tenantName: "Artisanat Marocain Coop", roleNames: ["Admin", "Manager"], status: "active" },
+  { firstName: "Fatima", lastName: "El Fassi", email: "artisan.fatima@artisanatmaroc.ma", password: "password123", tenantName: "Artisanat Marocain Coop", roleNames: ["Employé"], status: "active" }, // Matches employeesData
+  { firstName: "Directeur", lastName: "Financier", email: "directeur.financier@sfalmaghrib.ma", password: "password123", tenantName: "Services Financiers Al Maghrib", roleNames: ["Admin", "Manager", "Comptable"], status: "active" },
+  { firstName: "Youssef", lastName: "Tazi", email: "analyste.youssef@sfalmaghrib.ma", password: "password123", tenantName: "Services Financiers Al Maghrib", roleNames: ["Employé"], status: "active" }, // Matches employeesData
 ];
 
 /**
@@ -77,16 +82,16 @@ const departmentsData = [
  * @property {string} [jobTitle]
  * @property {string} departmentName
  * @property {string} tenantName
- * @property {string} [reportingManagerEmail]
+ * @property {string} [managerEmail] - Email of the reporting manager.
  * @property {Employee?} instance - Will store the Sequelize instance.
  */
 const employeesData = [
-  { firstName: "Ahmed", lastName: "Bennani", email: "dev.ahmed@techsolutions.ma", phoneNumber: "0612345678", dateOfBirth: new Date("1990-05-15"), address: "12 Rue de la Liberté, Casablanca", hireDate: new Date("2022-01-10"), jobTitle: "Développeur Senior", departmentName: "Développement Logiciel", tenantName: "TechSolutions SARL", reportingManagerEmail: "admin@techsolutions.ma" },
-  { firstName: "Fatima", lastName: "Zahra", email: "manager.rh@techsolutions.ma", phoneNumber: "0698765432", dateOfBirth: new Date("1985-11-20"), address: "45 Avenue Hassan II, Rabat", hireDate: new Date("2020-03-01"), jobTitle: "Responsable RH et Comptabilité", departmentName: "Ressources Humaines", tenantName: "TechSolutions SARL" },
-  { firstName: "Fatima", lastName: "El Fassi", email: "artisan.fatima@artisanatmaroc.ma", phoneNumber: "0655554433", dateOfBirth: new Date("1978-03-25"), address: "7 Derb Lihoudi, Fès", hireDate: new Date("2015-06-01"), jobTitle: "Artisane Principale", departmentName: "Production Artisanale", tenantName: "Artisanat Marocain Coop", reportingManagerEmail: "admin@artisanatmaroc.ma" },
-  { firstName: "Youssef", lastName: "Alaoui", email: "youssef.marketing@artisanatmaroc.ma", phoneNumber: "0622334455", dateOfBirth: new Date("1992-07-12"), address: "10 Rue Souika, Marrakech", hireDate: new Date("2023-01-20"), jobTitle: "Spécialiste Marketing", departmentName: "Ventes et Marketing", tenantName: "Artisanat Marocain Coop", reportingManagerEmail: "admin@artisanatmaroc.ma" },
-  { firstName: "Youssef", lastName: "Tazi", email: "analyste.youssef@sfalmaghrib.ma", phoneNumber: "0677889900", dateOfBirth: new Date("1995-09-03"), address: "33 Boulevard Mohammed V, Agadir", hireDate: new Date("2024-02-01"), jobTitle: "Analyste Financier Junior", departmentName: "Analyse Financière", tenantName: "Services Financiers Al Maghrib", reportingManagerEmail: "directeur.financier@sfalmaghrib.ma" },
-  { firstName: "Amina", lastName: "Saidi", email: "amina.clientele@sfalmaghrib.ma", phoneNumber: "0611223344", dateOfBirth: new Date("1988-12-30"), address: "5 Avenue des FAR, Tanger", hireDate: new Date("2021-08-15"), jobTitle: "Chargée de Clientèle", departmentName: "Service Clientèle", tenantName: "Services Financiers Al Maghrib", reportingManagerEmail: "directeur.financier@sfalmaghrib.ma" },
+  { firstName: "Ahmed", lastName: "Bennani", email: "dev.ahmed@techsolutions.ma", phoneNumber: "0612345678", dateOfBirth: new Date("1990-05-15"), address: "12 Rue de la Liberté, Casablanca", hireDate: new Date("2022-01-10"), jobTitle: "Développeur Senior", departmentName: "Développement Logiciel", tenantName: "TechSolutions SARL", managerEmail: "admin@techsolutions.ma" },
+  { firstName: "Fatima", lastName: "Zahra", email: "manager.rh@techsolutions.ma", phoneNumber: "0698765432", dateOfBirth: new Date("1985-11-20"), address: "45 Avenue Hassan II, Rabat", hireDate: new Date("2020-03-01"), jobTitle: "Responsable RH et Comptabilité", departmentName: "Ressources Humaines", tenantName: "TechSolutions SARL", managerEmail: null }, // No manager for top RH manager or make admin manager?
+  { firstName: "Fatima", lastName: "El Fassi", email: "artisan.fatima@artisanatmaroc.ma", phoneNumber: "0655554433", dateOfBirth: new Date("1978-03-25"), address: "7 Derb Lihoudi, Fès", hireDate: new Date("2015-06-01"), jobTitle: "Artisane Principale", departmentName: "Production Artisanale", tenantName: "Artisanat Marocain Coop", managerEmail: "admin@artisanatmaroc.ma" },
+  { firstName: "Youssef", lastName: "Alaoui", email: "youssef.marketing@artisanatmaroc.ma", phoneNumber: "0622334455", dateOfBirth: new Date("1992-07-12"), address: "10 Rue Souika, Marrakech", hireDate: new Date("2023-01-20"), jobTitle: "Spécialiste Marketing", departmentName: "Ventes et Marketing", tenantName: "Artisanat Marocain Coop", managerEmail: "admin@artisanatmaroc.ma" },
+  { firstName: "Youssef", lastName: "Tazi", email: "analyste.youssef@sfalmaghrib.ma", phoneNumber: "0677889900", dateOfBirth: new Date("1995-09-03"), address: "33 Boulevard Mohammed V, Agadir", hireDate: new Date("2024-02-01"), jobTitle: "Analyste Financier Junior", departmentName: "Analyse Financière", tenantName: "Services Financiers Al Maghrib", managerEmail: "directeur.financier@sfalmaghrib.ma" },
+  { firstName: "Amina", lastName: "Saidi", email: "amina.clientele@sfalmaghrib.ma", phoneNumber: "0611223344", dateOfBirth: new Date("1988-12-30"), address: "5 Avenue des FAR, Tanger", hireDate: new Date("2021-08-15"), jobTitle: "Chargée de Clientèle", departmentName: "Service Clientèle", tenantName: "Services Financiers Al Maghrib", managerEmail: "directeur.financier@sfalmaghrib.ma" },
 ];
 
 /**
@@ -157,11 +162,11 @@ async function seedRoles() {
     }
     for (const roleData of rolesData) { // Using the generic rolesData for each tenant
       const [role, created] = await Role.findOrCreate({
-        where: { name: roleData.name, tenant_id: tenantData.instance.id },
+        where: { name: roleData.name, tenantId: tenantData.instance.id },
         defaults: {
           name: roleData.name,
           description: roleData.description,
-          tenant_id: tenantData.instance.id,
+          tenantId: tenantData.instance.id,
         },
       });
       // Storing role instances might be complex if rolesData is reused.
@@ -182,28 +187,34 @@ async function seedUsers() {
     }
 
     const [user, created] = await User.findOrCreate({
-      where: { email: userData.email }, // Assuming email is unique across all tenants. If not, add tenant_id to where.
+      where: { email: userData.email }, // Email is globally unique as per model definition
       defaults: {
+        first_name: userData.firstName,
+        last_name: userData.lastName,
         email: userData.email,
-        password: userData.password, // Hook in User model will hash it
-        tenant_id: tenant.id,
+        password_hash: userData.password, // As per previous instruction for User model
+        tenantId: tenant.id, // Corrected to camelCase
+        status: userData.status || 'active', // Default to 'active' if not provided
       },
     });
     userData.instance = user;
 
-    if (created) console.log(`User '${user.email}' created.`);
-    else console.log(`User '${user.email}' already exists.`);
+    if (created) console.log(`User '${user.email}' (Name: ${user.first_name} ${user.last_name}) created.`);
+    else console.log(`User '${user.email}' (Name: ${user.first_name} ${user.last_name}) already exists.`);
 
     // Assign roles
     if (userData.roleNames && userData.roleNames.length > 0) {
       const rolesToAssign = await Role.findAll({
         where: {
           name: userData.roleNames,
-          tenant_id: tenant.id,
+          tenantId: tenant.id, // Ensure roles are fetched for the correct tenant (camelCase)
         },
       });
-      await user.setRoles(rolesToAssign); // setRoles handles the join table
-      console.log(`Assigned roles to user '${user.email}': ${userData.roleNames.join(', ')}`);
+      if (rolesToAssign.length !== userData.roleNames.length) {
+        console.warn(`Not all roles (${userData.roleNames.join(', ')}) found for user '${userData.email}' in tenant '${tenant.name}'. Found: ${rolesToAssign.map(r => r.name).join(', ')}`);
+      }
+      await user.setRoles(rolesToAssign); // setRoles handles the UserRole join table
+      console.log(`Set roles for user '${user.email}' to: ${rolesToAssign.map(r => r.name).join(', ')}`);
     }
   }
 }
@@ -217,22 +228,17 @@ async function seedDepartments() {
       continue;
     }
 
-    let managerId = null;
-    if (deptData.managerEmail) {
-      const managerUser = usersData.find(u => u.email === deptData.managerEmail && u.tenantName === deptData.tenantName)?.instance;
-      if (managerUser) {
-        managerId = managerUser.id;
-      } else {
-        console.warn(`Manager user with email '${deptData.managerEmail}' for department '${deptData.name}' not found. Setting manager_id to null.`);
-      }
-    }
+    // Manager assignment for departments is removed as per instruction (Department model does not have managerId field)
+    // const managerUser = usersData.find(u => u.email === deptData.managerEmail && u.tenantName === deptData.tenantName)?.instance;
+    // let managerId = managerUser ? managerUser.id : null;
 
     const [department, created] = await Department.findOrCreate({
-      where: { name: deptData.name, tenant_id: tenant.id },
+      where: { name: deptData.name, tenantId: tenant.id },
       defaults: {
         name: deptData.name,
-        tenant_id: tenant.id,
-        manager_id: managerId,
+        description: deptData.description || null, // Add description if available in deptData
+        tenantId: tenant.id,
+        // managerId: managerId, // Removed as Department model does not have managerId
       },
     });
     deptData.instance = department;
@@ -242,57 +248,101 @@ async function seedDepartments() {
 }
 
 async function seedEmployees() {
-  console.log('Seeding employees...');
-  for (const empData of employeesData) {
-    const tenant = tenantsData.find(t => t.name === empData.tenantName)?.instance;
+  console.log('Seeding employees with two-pass approach for managers...');
+  const employeeInstanceMap = {}; // To store created employee instances, keyed by email
+
+  // First Pass: Create all employees without reportingManagerId
+  console.log('--- Starting Employee Creation Pass (Pass 1) ---');
+  for (const tenantData of tenantsData) { // Iterate through tenants
+    const tenant = tenantData.instance;
     if (!tenant) {
-      console.error(`Tenant '${empData.tenantName}' not found for employee '${empData.email}'. Skipping.`);
+      console.error(`Tenant instance for ${tenantData.name} not found. Skipping employees for this tenant.`);
       continue;
     }
 
-    const department = departmentsData.find(d => d.name === empData.departmentName && d.tenantName === empData.tenantName)?.instance;
-    if (!department) {
-      console.error(`Department '${empData.departmentName}' for tenant '${empData.tenantName}' not found for employee '${empData.email}'. Skipping.`);
-      continue;
-    }
+    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name);
 
-    let reportingManagerId = null;
-    if (empData.reportingManagerEmail) {
-      // Assuming manager is an Employee, first find the User, then the Employee record
-      const managerUser = usersData.find(u => u.email === empData.reportingManagerEmail && u.tenantName === empData.tenantName)?.instance;
-      if (managerUser) {
-        const managerEmployee = await Employee.findOne({ where: { user_id: managerUser.id, tenant_id: tenant.id }});
-        if(managerEmployee) {
-            reportingManagerId = managerEmployee.id;
-        } else {
-            console.warn(`Reporting manager (as Employee) with email '${empData.reportingManagerEmail}' not found for employee '${empData.email}'.`);
-        }
+    for (const empData of tenantEmployeesData) {
+      const department = departmentsData.find(d => d.name === empData.departmentName && d.tenantName === tenant.name)?.instance;
+      if (!department) {
+        console.error(`Department '${empData.departmentName}' for tenant '${tenant.name}' not found for employee '${empData.email}'. Skipping.`);
+        continue;
+      }
+
+      const user = usersData.find(u => u.email === empData.email && u.tenantName === tenant.name)?.instance;
+      if (!user) {
+        console.error(`User with email '${empData.email}' for employee not found in tenant '${tenant.name}'. Skipping employee.`);
+        continue;
+      }
+
+      const employeeDefaults = {
+        first_name: empData.firstName,
+        last_name: empData.lastName,
+        email: empData.email,
+        phone_number: empData.phoneNumber || null,
+        date_of_birth: empData.dateOfBirth ? new Date(empData.dateOfBirth) : null,
+        address: empData.address || null,
+        hire_date: empData.hireDate ? new Date(empData.hireDate) : null,
+        job_title: empData.jobTitle || null,
+        status: empData.status || 'active', // Assuming 'status' might be in empData
+        tenantId: tenant.id,
+        departmentId: department.id,
+        userId: user.id,
+        // reportingManagerId is NOT set in the first pass
+      };
+
+      const [employee, created] = await Employee.findOrCreate({
+        where: { email: empData.email, tenantId: tenant.id },
+        defaults: employeeDefaults,
+      });
+
+      if (created) {
+        console.log(`Created employee ${employee.first_name} ${employee.last_name} (${employee.email}) for tenant ${tenant.name}`);
       } else {
-        console.warn(`Reporting manager (as User) with email '${empData.reportingManagerEmail}' not found for employee '${empData.email}'.`);
+        console.log(`Employee ${employee.first_name} ${employee.last_name} (${employee.email}) already exists for tenant ${tenant.name}`);
+      }
+      // Store instance using a key that uniquely identifies the employee within the context of the seed data (email + tenantName for safety, though email is globally unique for users/employees here)
+      employeeInstanceMap[`${employee.email}_${tenant.name}`] = employee;
+      empData.instance = employee; // also keep it on empData for reference if needed, though map is primary for lookup
+    }
+  }
+  console.log('--- Finished Employee Creation Pass (Pass 1) ---');
+
+  // Second Pass: Update employees with their reportingManagerId
+  console.log('--- Starting Employee Manager Linking Pass (Pass 2) ---');
+  for (const tenantData of tenantsData) { // Iterate through tenants again
+    const tenant = tenantData.instance;
+    if (!tenant) {
+      console.error(`Tenant instance for ${tenantData.name} not found during manager linking pass. Skipping.`);
+      continue;
+    }
+    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name);
+
+    for (const empData of tenantEmployeesData) {
+      if (empData.managerEmail) { // 'managerEmail' instead of 'reportingManagerEmail'
+        const currentEmployee = employeeInstanceMap[`${empData.email}_${tenant.name}`];
+        // Manager must be within the same tenant
+        const manager = employeeInstanceMap[`${empData.managerEmail}_${tenant.name}`];
+
+        if (currentEmployee && manager) {
+          if (currentEmployee.id === manager.id) {
+            console.warn(`Employee ${currentEmployee.email} (Tenant: ${tenant.name}) cannot be their own manager. Skipping self-assignment.`);
+            continue;
+          }
+          currentEmployee.reportingManagerId = manager.id; // Ensure Employee model has 'reportingManagerId'
+          await currentEmployee.save();
+          console.log(`Linked employee ${currentEmployee.email} to manager ${manager.email} for tenant ${tenant.name}`);
+        } else if (!manager) {
+          console.warn(`Manager with email ${empData.managerEmail} (Tenant: ${tenant.name}) not found in instance map for employee ${empData.email}.`);
+        } else if (!currentEmployee) {
+          // This case should ideally not happen if Pass 1 is correct
+          console.warn(`Employee with email ${empData.email} (Tenant: ${tenant.name}) was not found in the instance map during Pass 2.`);
+        }
       }
     }
-
-    // Find the corresponding User for the Employee
-    const user = usersData.find(u => u.email === empData.email && u.tenantName === empData.tenantName)?.instance;
-    if (!user) {
-        console.error(`User with email '${empData.email}' for employee not found. Skipping employee.`);
-        continue;
-    }
-
-    const [employee, created] = await Employee.findOrCreate({
-      where: { email: empData.email, tenant_id: tenant.id }, // Using email and tenant_id as unique constraint for employee
-      defaults: {
-        ...empData, // Spreading other fields like firstName, lastName, etc.
-        tenant_id: tenant.id,
-        department_id: department.id,
-        user_id: user.id, // Link to the User record
-        manager_id: reportingManagerId,
-      },
-    });
-    empData.instance = employee;
-    if (created) console.log(`Employee '${employee.firstName} ${employee.lastName}' (${employee.email}) created.`);
-    else console.log(`Employee '${employee.firstName} ${employee.lastName}' (${employee.email}) already exists.`);
   }
+  console.log('--- Finished Employee Manager Linking Pass (Pass 2) ---');
+  console.log('Employee seeding complete.');
 }
 
 async function seedSalaryComponents() {
@@ -303,9 +353,28 @@ async function seedSalaryComponents() {
       console.error(`Tenant '${scData.tenantName}' not found for salary component '${scData.name}'. Skipping.`);
       continue;
     }
+    const defaults = {
+        name: scData.name,
+        type: scData.type,
+        amount: scData.amount || null,
+        percentage: scData.percentage || null,
+        isTaxApplicable: scData.isTaxApplicable !== undefined ? scData.isTaxApplicable : null,
+        isPensionApplicable: scData.isPensionApplicable !== undefined ? scData.isPensionApplicable : null,
+        tenantId: tenant.id,
+        // basedOnComponentId: scData.basedOnComponentId || null, // Example if it exists
+    };
+    if (scData.basedOnComponentId) { // Only add if present in data
+        const basedOn = salaryComponentsData.find(s => s.name === scData.basedOnComponentName && s.tenantName === scData.tenantName)?.instance;
+        if (basedOn) {
+            defaults.basedOnComponentId = basedOn.id;
+        } else {
+            console.warn(`Based on component '${scData.basedOnComponentName}' not found for '${scData.name}'.`);
+        }
+    }
+
     const [component, created] = await SalaryComponent.findOrCreate({
-      where: { name: scData.name, tenant_id: tenant.id },
-      defaults: { ...scData, tenant_id: tenant.id },
+      where: { name: scData.name, tenantId: tenant.id },
+      defaults: defaults,
     });
     scData.instance = component;
     if (created) console.log(`SalaryComponent '${component.name}' for tenant '${tenant.name}' created.`);
@@ -322,8 +391,14 @@ async function seedPaySchedules() {
       continue;
     }
     const [schedule, created] = await PaySchedule.findOrCreate({
-      where: { name: psData.name, tenant_id: tenant.id },
-      defaults: { ...psData, tenant_id: tenant.id },
+      where: { name: psData.name, tenantId: tenant.id },
+      defaults: {
+        name: psData.name,
+        payFrequency: psData.payFrequency,
+        payDayOfMonth: psData.payDayOfMonth || null,
+        payDayOfWeek: psData.payDayOfWeek || null,
+        tenantId: tenant.id,
+      },
     });
     psData.instance = schedule;
     if (created) console.log(`PaySchedule '${schedule.name}' for tenant '${tenant.name}' created.`);
