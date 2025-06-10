@@ -98,6 +98,10 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: false,
       allowNull: false,
     },
+    payslip_display_order: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     // order: { // For display or calculation order
     //   type: DataTypes.INTEGER,
     //   allowNull: true,
