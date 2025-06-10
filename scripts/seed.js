@@ -129,17 +129,37 @@ const salaryComponentsData = [
 /**
  * @typedef {Object} PayScheduleData
  * @property {string} name
- * @property {string} payFrequency - 'Monthly', 'Bi-Weekly', 'Weekly'
- * @property {number} payDayOfMonth
- * @property {string} [payDayOfWeek]
+ * @property {string} frequency - 'monthly', 'weekly', 'bi-weekly'
+ * @property {number} [pay_day_of_month] - For monthly frequency
+ * @property {number} [pay_period_start_day] - For weekly/bi-weekly if applicable (e.g. 1 for Monday)
  * @property {string} tenantName
  * @property {PaySchedule?} instance - Will store the Sequelize instance.
  */
 const paySchedulesData = [
-  { name: "Paiement Mensuel Standard", payFrequency: "Monthly", payDayOfMonth: 28, tenantName: "TechSolutions SARL" },
-  { name: "Paiement Fin de Mois Artisans", payFrequency: "Monthly", payDayOfMonth: 30, tenantName: "Artisanat Marocain Coop" },
-  { name: "Paiement Mensuel Cadres", payFrequency: "Monthly", payDayOfMonth: 25, tenantName: "Services Financiers Al Maghrib" },
-  { name: "Paiement Hebdomadaire Stagiaires", payFrequency: "Weekly", payDayOfWeek: "Friday", tenantName: "TechSolutions SARL" }
+  {
+    name: "Paiement Mensuel Standard",
+    frequency: "monthly",
+    pay_day_of_month: 28,
+    tenantName: "TechSolutions SARL"
+  },
+  {
+    name: "Paiement Fin de Mois Artisans",
+    frequency: "monthly",
+    pay_day_of_month: 30,
+    tenantName: "Artisanat Marocain Coop"
+  },
+  {
+    name: "Paiement Mensuel Cadres",
+    frequency: "monthly",
+    pay_day_of_month: 25,
+    tenantName: "Services Financiers Al Maghrib"
+  },
+  {
+    name: "Paiement Hebdomadaire Stagiaires",
+    frequency: "weekly",
+    pay_period_start_day: 1, // This entry uses pay_period_start_day instead of pay_day_of_month
+    tenantName: "TechSolutions SARL"
+  }
 ];
 
 
@@ -394,13 +414,16 @@ async function seedPaySchedules() {
       continue;
     }
     const [schedule, created] = await PaySchedule.findOrCreate({
-      where: { name: psData.name, tenantId: tenant.id },
+      where: { name: psData.name, tenantId: tenant.id }, // Assuming name and tenantId define uniqueness
       defaults: {
         name: psData.name,
-        payFrequency: psData.payFrequency,
-        payDayOfMonth: psData.payDayOfMonth || null,
-        payDayOfWeek: psData.payDayOfWeek || null,
         tenantId: tenant.id,
+        frequency: psData.frequency,
+        pay_day_of_month: psData.pay_day_of_month || null,
+        pay_period_start_day: psData.pay_period_start_day || null,
+        // pay_day_of_week: psData.pay_day_of_week || null, // if you add this to your model
+        // calculation_day_of_month: psData.calculation_day_of_month || null, // if you add this
+        // calculation_day_of_week: psData.calculation_day_of_week || null, // if you add this
       },
     });
     psData.instance = schedule;
