@@ -68,7 +68,9 @@ const SalaryComponentModal: React.FC<SalaryComponentModalProps> = ({
             <Input
               placeholder="Enter component name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setName(e.target.value)
+              }
             />
           </FormControl>
 
@@ -76,7 +78,9 @@ const SalaryComponentModal: React.FC<SalaryComponentModalProps> = ({
             <FormLabel>Type</FormLabel>
             <Select
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setType(e.target.value)
+              }
               placeholder="Select type"
             >
               <option value="earning">Earning</option>
@@ -88,7 +92,9 @@ const SalaryComponentModal: React.FC<SalaryComponentModalProps> = ({
             <FormLabel>Calculation Type</FormLabel>
             <Select
               value={calculationType}
-              onChange={(e) => setCalculationType(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setCalculationType(e.target.value)
+              }
               placeholder="Select calculation type"
             >
               <option value="fixed">Fixed</option>
@@ -103,14 +109,18 @@ const SalaryComponentModal: React.FC<SalaryComponentModalProps> = ({
               type="number"
               placeholder="Enter value"
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setValue(e.target.value)
+              }
             />
           </FormControl>
 
           <FormControl mt={4}>
             <Checkbox
               isChecked={isTaxable}
-              onChange={(e) => setIsTaxable(e.target.checked)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setIsTaxable(e.target.checked)
+              }
             >
               Taxable
             </Checkbox>
@@ -119,7 +129,9 @@ const SalaryComponentModal: React.FC<SalaryComponentModalProps> = ({
           <FormControl mt={4}>
             <Checkbox
               isChecked={isCalculatedInCtc}
-              onChange={(e) => setIsCalculatedInCtc(e.target.checked)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setIsCalculatedInCtc(e.target.checked)
+              }
             >
               Calculated in CTC
             </Checkbox>

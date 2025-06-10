@@ -1,4 +1,8 @@
-import React from 'react';
+// frontend/src/features/salaryComponents/components/SalaryComponentList.tsx
+import React, { FC } from 'react';
+import { SalaryComponent } from '../../../types';
+
+// These imports should now work because of the ChakraProvider setup
 import {
   Table,
   Thead,
@@ -6,75 +10,36 @@ import {
   Tr,
   Th,
   Td,
+  TableContainer,
   Button,
-  IconButton,
-  useDisclosure, // For managing modal state
+  Text,
+  Box,
+  Switch
 } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
-import SalaryComponentModal from './SalaryComponentModal'; // Import the modal
-
-// Define a type for salary components (replace 'any' with this type)
-interface SalaryComponent {
-  id: string; // Or number, depending on your data
-  name: string;
-  type: 'earning' | 'deduction';
-  calculationType: 'fixed' | 'percentage'; // Add other types if any
-  value: number;
-  isTaxable: boolean;
-  isCalculatedInCtc: boolean;
-  // Add other relevant fields
-}
 
 interface SalaryComponentListProps {
   components: SalaryComponent[];
   onEdit: (component: SalaryComponent) => void;
-  onDelete: (id: string) => void; // Or number, depending on your data
-  onAddNew: (component: SalaryComponent) => void; // For adding a new component
+  onDelete: (id: string, name: string) => void;
+  onToggleActive: (component: SalaryComponent) => void;
 }
 
-const SalaryComponentList: React.FC<SalaryComponentListProps> = ({
-  components,
-  onEdit,
-  onDelete,
-  onAddNew,
-}) => {
-  const { isOpen, onOpen, onClose } = useDisclosure(); // Hook for modal state
-  const [editingComponent, setEditingComponent] = React.useState<SalaryComponent | undefined>(undefined);
-
-  const handleEdit = (component: SalaryComponent) => {
-    setEditingComponent(component);
-    onOpen(); // Open modal for editing
-  };
-
-  const handleAddNew = () => {
-    setEditingComponent(undefined); // Ensure no component data is pre-filled
-    onOpen(); // Open modal for adding
-  };
-
-  const handleSave = (componentData: any) => { // Consider a more specific type than 'any'
-    if (editingComponent) {
-      onEdit({ ...editingComponent, ...componentData }); // Merge and save
-    } else {
-      onAddNew(componentData); // Save as new component
-    }
-    onClose(); // Close modal after saving
-  };
+const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit, onDelete, onToggleActive }) => {
+  if (!components || components.length === 0) {
+    return <Text mt="4">No salary components found. Create one to get started!</Text>;
+  }
 
   return (
-    <>
-      <Button onClick={handleAddNew} colorScheme="blue" mb={4}>
-        Add New Component
-      </Button>
-
+    <TableContainer borderWidth="1px" borderRadius="md" mt="4">
       <Table variant="simple">
         <Thead>
           <Tr>
             <Th>Name</Th>
             <Th>Type</Th>
-            <Th>Calculation Type</Th>
-            <Th isNumeric>Value</Th>
+            <Th isNumeric>Default Amount</Th>
             <Th>Taxable</Th>
-            <Th>In CTC</Th>
+            <Th>Active</Th>
+            <Th>Origin</Th>
             <Th>Actions</Th>
           </Tr>
         </Thead>
@@ -82,37 +47,41 @@ const SalaryComponentList: React.FC<SalaryComponentListProps> = ({
           {components.map((component) => (
             <Tr key={component.id}>
               <Td>{component.name}</Td>
-              <Td>{component.type}</Td>
-              <Td>{component.calculationType}</Td>
-              <Td isNumeric>{component.value}</Td>
-              <Td>{component.isTaxable ? 'Yes' : 'No'}</Td>
-              <Td>{component.isCalculatedInCtc ? 'Yes' : 'No'}</Td>
+              <Td textTransform="capitalize">{component.type}</Td>
+              <Td isNumeric>
+                {component.default_amount != null ? component.default_amount.toFixed(2) : 'N/A'}
+              </Td>
+              <Td>{component.is_taxable ? 'Yes' : 'No'}</Td>
               <Td>
-                <IconButton
-                  aria-label="Edit component"
-                  icon={<EditIcon />}
-                  onClick={() => handleEdit(component)}
-                  mr={2}
-                />
-                <IconButton
-                  aria-label="Delete component"
-                  icon={<DeleteIcon />}
-                  onClick={() => onDelete(component.id)}
-                />
+                {!component.is_system_defined ? (
+                  <Switch
+                    id={`active-switch-${component.id}`}
+                    isChecked={component.is_active}
+                    onChange={() => onToggleActive(component)}
+                    colorScheme="green"
+                  />
+                ) : (
+                  component.is_active ? 'Yes' : 'No'
+                )}
+              </Td>
+              <Td>{component.is_system_defined ? 'System' : 'Custom'}</Td>
+              <Td>
+                {!component.is_system_defined && (
+                  <Box display="flex" gap={2}>
+                    <Button size="sm" colorScheme="blue" onClick={() => onEdit(component)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" colorScheme="red" onClick={() => onDelete(component.id, component.name)}>
+                      Delete
+                    </Button>
+                  </Box>
+                )}
               </Td>
             </Tr>
           ))}
         </Tbody>
       </Table>
-
-      {/* Modal for Add/Edit */}
-      <SalaryComponentModal
-        isOpen={isOpen}
-        onClose={onClose}
-        onSave={handleSave}
-        component={editingComponent}
-      />
-    </>
+    </TableContainer>
   );
 };
 
