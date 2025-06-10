@@ -34,6 +34,18 @@ module.exports = (sequelize, DataTypes) => {
       // For simplicity, let's assume an Employee can be directly associated with multiple PayrollRun entries if needed.
       // Or, more commonly, a PayrollRun would have many EmployeePayroll entries.
       // For now, we'll leave this out and let PayrollRun handle its relation to employees.
+
+      // Self-referential for manager/reportees
+      Employee.belongsTo(models.Employee, {
+        as: 'manager',
+        foreignKey: 'reportingManagerId',
+        // allowNull: true is implied by the field definition, not specified in association for belongsTo like this
+      });
+
+      Employee.hasMany(models.Employee, {
+        as: 'reportees',
+        foreignKey: 'reportingManagerId',
+      });
     }
   }
 
@@ -106,6 +118,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('active', 'on_leave', 'terminated', 'pending_hire'),
       defaultValue: 'pending_hire',
       allowNull: false,
+    },
+    reportingManagerId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'employees', // Table name for Employee model
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE',
     },
     // Add other employee-specific fields like address, salary info (could be in a separate model), etc.
   }, {
