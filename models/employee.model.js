@@ -98,6 +98,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    address: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     job_title: {
       type: DataTypes.STRING,
       allowNull: true, // Or false

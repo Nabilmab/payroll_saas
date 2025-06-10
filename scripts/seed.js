@@ -100,28 +100,30 @@ const employeesData = [
 /**
  * @typedef {Object} SalaryComponentData
  * @property {string} name
- * @property {string} type - 'Earning' or 'Deduction'
- * @property {number} [amount]
- * @property {number} [percentage]
  * @property {string} tenantName
- * @property {boolean} [isTaxApplicable]
- * @property {boolean} [isPensionApplicable]
+ * @property {string} type - 'earning' or 'deduction'
+ * @property {string} calculation_type - 'fixed', 'percentage', or 'formula'
+ * @property {number} [amount] - Required if calculation_type is 'fixed'
+ * @property {number} [percentage] - Required if calculation_type is 'percentage'
+ * @property {boolean} is_taxable
  * @property {SalaryComponent?} instance - Will store the Sequelize instance.
  */
 const salaryComponentsData = [
-  { name: "Salaire de Base", type: "Earning", tenantName: "TechSolutions SARL", isTaxApplicable: true, isPensionApplicable: true },
-  { name: "Indemnité de Transport", type: "Earning", tenantName: "TechSolutions SARL", amount: 500, isTaxApplicable: false, isPensionApplicable: false },
-  { name: "CNSS", type: "Deduction", tenantName: "TechSolutions SARL", percentage: 0.0674, isTaxApplicable: false, isPensionApplicable: false },
-  { name: "AMO", type: "Deduction", tenantName: "TechSolutions SARL", percentage: 0.0226, isTaxApplicable: false, isPensionApplicable: false },
-  { name: "Salaire de Base", type: "Earning", tenantName: "Artisanat Marocain Coop", isTaxApplicable: true, isPensionApplicable: true },
-  { name: "Prime de Rendement", type: "Earning", tenantName: "Artisanat Marocain Coop", amount: 1000, isTaxApplicable: true, isPensionApplicable: true },
-  { name: "CNSS", type: "Deduction", tenantName: "Artisanat Marocain Coop", percentage: 0.0674, isTaxApplicable: false, isPensionApplicable: false },
-  { name: "AMO", type: "Deduction", tenantName: "Artisanat Marocain Coop", percentage: 0.0226, isTaxApplicable: false, isPensionApplicable: false },
-  { name: "Salaire de Base", type: "Earning", tenantName: "Services Financiers Al Maghrib", isTaxApplicable: true, isPensionApplicable: true },
-  { name: "Bonus de Performance", type: "Earning", tenantName: "Services Financiers Al Maghrib", percentage: 0.10, isTaxApplicable: true, isPensionApplicable: true }, // 10% of base for example
-  { name: "IGR (Impôt Général sur le Revenu)", type: "Deduction", tenantName: "Services Financiers Al Maghrib", isTaxApplicable: false, isPensionApplicable: false }, // Placeholder; actual IGR is calculated
-  { name: "CNSS", type: "Deduction", tenantName: "Services Financiers Al Maghrib", percentage: 0.0674, isTaxApplicable: false, isPensionApplicable: false },
-  { name: "AMO", type: "Deduction", tenantName: "Services Financiers Al Maghrib", percentage: 0.0226, isTaxApplicable: false, isPensionApplicable: false },
+  // --- TechSolutions SARL ---
+  { name: "Salaire de Base", tenantName: "TechSolutions SARL", type: "earning", calculation_type: "fixed", is_taxable: true },
+  { name: "Indemnité de Transport", tenantName: "TechSolutions SARL", type: "earning", calculation_type: "fixed", amount: 500, is_taxable: false },
+  { name: "CNSS", tenantName: "TechSolutions SARL", type: "deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false },
+  { name: "AMO", tenantName: "TechSolutions SARL", type: "deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false },
+
+  // --- Artisanat Marocain Coop ---
+  { name: "Salaire de Base", tenantName: "Artisanat Marocain Coop", type: "earning", calculation_type: "fixed", is_taxable: true },
+  { name: "Prime de Rendement", tenantName: "Artisanat Marocain Coop", type: "earning", calculation_type: "fixed", amount: 1000, is_taxable: true },
+  { name: "CNSS", tenantName: "Artisanat Marocain Coop", type: "deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false },
+
+  // --- Services Financiers Al Maghrib ---
+  { name: "Salaire de Base", tenantName: "Services Financiers Al Maghrib", type: "earning", calculation_type: "fixed", is_taxable: true },
+  { name: "Bonus de Performance", tenantName: "Services Financiers Al Maghrib", type: "earning", calculation_type: "percentage", percentage: 10.00, is_taxable: true },
+  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Services Financiers Al Maghrib", type: "deduction", calculation_type: "formula", is_taxable: false },
 ];
 
 /**
@@ -359,25 +361,22 @@ async function seedSalaryComponents() {
     }
     const defaults = {
         name: scData.name,
-        type: scData.type, // Assuming tenantName in salaryComponentsData still refers to the 'name' property
-        amount: scData.amount || null,
-        percentage: scData.percentage || null,
-        isTaxApplicable: scData.isTaxApplicable !== undefined ? scData.isTaxApplicable : null,
-        isPensionApplicable: scData.isPensionApplicable !== undefined ? scData.isPensionApplicable : null,
         tenantId: tenant.id,
-        // basedOnComponentId: scData.basedOnComponentId || null, // Example if it exists
+        type: scData.type,
+        calculation_type: scData.calculation_type,
+        amount: scData.amount || null, // Model should handle default if not applicable
+        percentage: scData.percentage || null, // Model should handle default if not applicable
+        is_taxable: scData.is_taxable,
+        // based_on_component_id: null, // Reset or handle based on new structure if needed
+        // formula: null, // Reset or handle based on new structure if needed
     };
-    if (scData.basedOnComponentId) { // Only add if present in data
-        const basedOn = salaryComponentsData.find(s => s.name === scData.basedOnComponentName && s.tenantName === scData.tenantName)?.instance; // Assuming tenantName refers to 'name'
-        if (basedOn) {
-            defaults.basedOnComponentId = basedOn.id;
-        } else {
-            console.warn(`Based on component '${scData.basedOnComponentName}' not found for '${scData.name}' in tenant '${tenant.name}' (schema: ${tenant.schema_name}).`);
-        }
-    }
+    // Example of how based_on_component_id or formula might be handled if they were in scData
+    // if (scData.based_on_component_name) { ... }
+    // if (scData.formula_string) { defaults.formula = scData.formula_string; }
+
 
     const [component, created] = await SalaryComponent.findOrCreate({
-      where: { name: scData.name, tenantId: tenant.id },
+      where: { name: scData.name, tenantId: tenant.id, type: scData.type }, // Added type to where clause for more uniqueness
       defaults: defaults,
     });
     scData.instance = component;
