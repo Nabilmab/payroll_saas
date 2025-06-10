@@ -18,12 +18,12 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       // User can have many Roles (through a join table, UserRoles)
-      // User.belongsToMany(models.Role, {
-      //   through: 'UserRoles', // Name of the join table
-      //   foreignKey: 'userId',
-      //   otherKey: 'roleId',
-      //   as: 'roles',
-      // });
+      User.belongsToMany(models.Role, {
+        through: models.UserRole, // Use the actual model for clarity and advanced options
+        foreignKey: 'userId',
+        otherKey: 'roleId',
+        as: 'roles',
+      });
     }
 
     // Instance method to check password
