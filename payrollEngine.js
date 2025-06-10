@@ -1,5 +1,6 @@
 // payrollEngine.js
 
+const { Op } = require('sequelize');
 const {
     sequelize,
     Tenant,
@@ -10,16 +11,11 @@ const {
     PayrollRun,
     Payslip,
     PayslipItem,
-    User // If you need processedByUserId
-} = require('./models'); // Assuming this file is in your project root
+    User
+} = require('./models');
 
 /**
  * Determines the start date of a pay period.
- * This is a simplified example. A real system would need robust date logic,
- * considering pay schedule specifics (day of week, specific days of month).
- * @param {Date} periodEndDate - The end date of the pay period.
- * @param {string} frequency - The pay schedule frequency ('weekly', 'bi_weekly', 'semi_monthly', 'monthly').
- * @returns {Date} The calculated start date of the pay period.
  */
 function calculatePeriodStartDate(periodEndDate, frequency) {
     const startDate = new Date(periodEndDate);
@@ -34,8 +30,6 @@ function calculatePeriodStartDate(periodEndDate, frequency) {
             startDate.setDate(periodEndDate.getDate() - 13);
             break;
         case 'semi_monthly':
-            // This is tricky and depends on how semi-monthly is defined (e.g., 1st-15th, 16th-end)
-            // For simplicity, assuming if end is > 15th, start is 16th, else 1st.
             if (periodEndDate.getDate() > 15) {
                 startDate.setDate(16);
             } else {
@@ -43,312 +37,294 @@ function calculatePeriodStartDate(periodEndDate, frequency) {
             }
             break;
         default:
-            // Fallback for unknown or 'custom' - might need more specific logic
-            startDate.setDate(1); // Default to start of month
+            startDate.setDate(1);
             console.warn(`Warning: Unhandled frequency '${frequency}' for period start date calculation. Defaulting to start of month.`);
     }
     return startDate;
 }
 
-
 /**
  * calculateIGR
- *
- * Implements the 2025 Moroccan progressive income‐tax scale (“Impôt Général sur le Revenu”).
- *
- * Brackets (annual taxable income in MAD):
- *    0 ‑ 40,000   → 0%
- *    40,001 ‑ 60,000 → 10%
- *    60,001 ‑ 80,000 → 20%
- *    80,001 ‑ 100,000 → 30%
- *    100,001 ‑ 180,000 → 34%
- *    Above 180,000 → 37%
- *
- * We assume that `taxableBase` is already an annual figure in MAD.
- * If you need monthly or semi‑monthly withholding, you can prorate accordingly
- * (e.g., divide the annual taxable base into 12 or 24 before applying these brackets).
- *
- * @param {number} taxableBase – The annual taxable income (MAD) for this employee.
+ * Implements the 2024 Moroccan progressive income-tax scale.
+ * Source: Simplified based on general understanding, actual DGI rules are more complex.
+ * Important: Assumes annual taxable base. Deductions for family charges, etc.,
+ * should be applied BEFORE calling this function if they reduce the taxable base.
+ * @param {number} annualTaxableBase - The annual taxable income in MAD.
  * @returns {number} The annual IGR owed (MAD), rounded to two decimals.
  */
-function calculateIGR(taxableBase) {
-    let remaining = taxableBase;
-    let tax = 0;
+function calculateIGR(annualTaxableBase) {
+    const brackets = [
+        { limit: 30000, rate: 0.00, deduction: 0 },       // 0% up to 30,000 MAD
+        { limit: 50000, rate: 0.10, deduction: 3000 },    // 10% for income between 30,001 and 50,000 MAD (minus 30000 * 0.10)
+        { limit: 60000, rate: 0.20, deduction: 8000 },    // 20% for income between 50,001 and 60,000 MAD (minus 50000 * 0.20 - 3000)
+        { limit: 80000, rate: 0.30, deduction: 14000 },   // 30% for income between 60,001 and 80,000 MAD
+        { limit: 180000, rate: 0.34, deduction: 17200 },  // 34% for income between 80,001 and 180,000 MAD
+        { limit: Infinity, rate: 0.38, deduction: 24400 } // 38% for income above 180,000 MAD
+    ];
 
-    // 1) 0 ‑ 40,000 @ 0%
-    const bracket1Cap = 40000;
-    if (remaining <= bracket1Cap) {
-        return 0.00;
+    let annualIGR = 0;
+    for (const bracket of brackets) {
+        if (annualTaxableBase <= bracket.limit) {
+            annualIGR = (annualTaxableBase * bracket.rate) - bracket.deduction;
+            break;
+        }
     }
-    // Move on to next bracket
-    remaining -= bracket1Cap;
-
-    // 2) 40,001 ‑ 60,000 @ 10%
-    const bracket2Cap = 20000; // (60,000 − 40,000)
-    if (remaining <= bracket2Cap) {
-        tax += remaining * 0.10;
-        return parseFloat(tax.toFixed(2));
-    }
-    tax += bracket2Cap * 0.10;
-    remaining -= bracket2Cap;
-
-    // 3) 60,001 ‑ 80,000 @ 20%
-    const bracket3Cap = 20000; // (80,000 − 60,000)
-    if (remaining <= bracket3Cap) {
-        tax += remaining * 0.20;
-        return parseFloat(tax.toFixed(2));
-    }
-    tax += bracket3Cap * 0.20;
-    remaining -= bracket3Cap;
-
-    // 4) 80,001 ‑ 100,000 @ 30%
-    const bracket4Cap = 20000; // (100,000 − 80,000)
-    if (remaining <= bracket4Cap) {
-        tax += remaining * 0.30;
-        return parseFloat(tax.toFixed(2));
-    }
-    tax += bracket4Cap * 0.30;
-    remaining -= bracket4Cap;
-
-    // 5) 100,001 ‑ 180,000 @ 34%
-    const bracket5Cap = 80000; // (180,000 − 100,000)
-    if (remaining <= bracket5Cap) {
-        tax += remaining * 0.34;
-        return parseFloat(tax.toFixed(2));
-    }
-    tax += bracket5Cap * 0.34;
-    remaining -= bracket5Cap;
-
-    // 6) Above 180,000 @ 37%
-    tax += remaining * 0.37;
-    return parseFloat(tax.toFixed(2));
+    // Ensure IGR is not negative (e.g. for very low incomes falling into first bracket calculation)
+    annualIGR = Math.max(0, annualIGR);
+    return parseFloat(annualIGR.toFixed(2));
 }
-
 
 /**
  * Processes payroll for a given tenant and pay schedule.
- * @param {string} tenantId - The ID of the tenant.
- * @param {string} payScheduleId - The ID of the pay schedule to run.
- * @param {Date} periodEndDate - The end date of the pay period (as a Date object).
- * @param {Date} paymentDate - The date the payment will be made (as a Date object).
- * @param {string} [processedByUserId] - Optional ID of the user initiating the run.
- * @returns {Promise<Object>} An object containing the created PayrollRun and its Payslips.
+ * This version implements a multi-pass approach.
  */
 async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDate, processedByUserId = null) {
-    console.log(`🚀 Starting payroll processing for Tenant: ${tenantId}, Pay Schedule: ${payScheduleId}, Period End: ${periodEndDate.toISOString().slice(0,10)}`);
-
+    console.log(`🚀 Starting payroll processing (multi-pass) for Tenant: ${tenantId}, Pay Schedule: ${payScheduleId}, Period End: ${periodEndDate.toISOString().slice(0,10)}`);
     const transaction = await sequelize.transaction();
 
     try {
-        // --- 1. Validations and Initial Setup ---
         const tenant = await Tenant.findByPk(tenantId, { transaction });
         if (!tenant) throw new Error(`Tenant with ID ${tenantId} not found.`);
-
         const paySchedule = await PaySchedule.findByPk(payScheduleId, { transaction });
         if (!paySchedule) throw new Error(`Pay Schedule with ID ${payScheduleId} not found.`);
         if (paySchedule.tenantId !== tenantId) throw new Error('Pay Schedule does not belong to the specified tenant.');
 
         const periodStartDate = calculatePeriodStartDate(new Date(periodEndDate), paySchedule.frequency);
 
-        // --- 2. Create the Master PayrollRun Record ---
         const payrollRun = await PayrollRun.create({
-            tenantId,
-            payScheduleId,
-            periodStart: periodStartDate,
-            periodEnd: periodEndDate,
-            paymentDate: paymentDate,
-            status: 'processing',
-            processedByUserId,
+            tenantId, payScheduleId, periodStart: periodStartDate, periodEnd: periodEndDate,
+            paymentDate: paymentDate, status: 'processing', processedByUserId,
         }, { transaction });
         console.log(`  - Created PayrollRun ID: ${payrollRun.id}`);
 
-        // --- 3. Fetch Active Employees for this Pay Schedule and Period ---
         const activeEmployees = await Employee.findAll({
             where: {
-                tenantId: tenantId,
-                status: 'active',
-                // Employee must be hired on or before the period ends
-                hire_date: { [sequelize.Op.lte]: periodEndDate },
-                // Employee must not be terminated before the period starts (or termination_date is null)
-                [sequelize.Op.or]: [
-                    { termination_date: null },
-                    { termination_date: { [sequelize.Op.gte]: periodStartDate } }
-                ],
-                // TODO: Add payScheduleId to Employee model and filter here if employees can be on different schedules
-                // payScheduleId: payScheduleId
+                tenantId: tenantId, status: 'active',
+                hire_date: { [Op.lte]: periodEndDate },
+                [Op.or]: [{ termination_date: null }, { termination_date: { [Op.gte]: periodStartDate } }],
             },
-            include: [
-                {
-                    model: EmployeeSalarySetting,
-                    as: 'employeeSalarySettings', // Alias from Employee model
-                    required: false, // Use left join: get employees even if they have no settings yet
-                    where: { is_active: true }, // Only active settings
-                    include: [{
-                        model: SalaryComponent,
-                        as: 'salaryComponent', // Alias from EmployeeSalarySetting model
-                        where: { is_active: true } // Only active components
-                    }]
-                }
-            ],
+            include: [{
+                model: EmployeeSalarySetting, as: 'employeeSalarySettings', required: false, where: { is_active: true },
+                include: [{ model: SalaryComponent, as: 'salaryComponent', where: { is_active: true } }]
+            }],
             transaction
         });
 
         if (activeEmployees.length === 0) {
             await payrollRun.update({ status: 'completed', notes: 'No active employees found for this period.' }, { transaction });
             await transaction.commit();
-            console.log('  - No active employees. Payroll run marked as completed (no payslips).');
             return { payrollRun, payslips: [] };
         }
         console.log(`  - Found ${activeEmployees.length} active employee(s).`);
 
-        // --- 4. Process Each Employee ---
-        let totalGrossPayRun = 0;
-        let totalDeductionsRun = 0;
-        let totalTaxesRun = 0;
         const createdPayslips = [];
+        let totalGrossPayRun = 0, totalDeductionsRun = 0, totalTaxesRun = 0;
 
         for (const employee of activeEmployees) {
             console.log(`    - Processing employee: ${employee.first_name} ${employee.last_name} (ID: ${employee.id})`);
-            let grossPayEmployee = 0;
-            let deductionsEmployee = 0; // Non-tax deductions
-            let taxesEmployee = 0;    // Tax deductions
-            const payslipItemsData = [];
+            const employeeContext = {
+                employee,
+                settings: employee.employeeSalarySettings || [],
+                payslipItems: [], // Stores { component, amount } for this employee
+                monthlyBaseSalary: 0,
+                cnssBase: 0,
+                amoBase: 0,
+                taxableSalaryMonthly: 0,
+                netTaxableAnnual: 0, // Will be calculated from monthly taxable
+                igrMonthly: 0,
+                grossPay: 0,
+                totalDeductions: 0, // All deductions (cnss, amo, igr, other)
+                taxes: 0, // Specifically IGR, CNSS, AMO
+                otherDeductions: 0 // Non-statutory deductions
+            };
 
-            const employeeSettings = employee.employeeSalarySettings || [];
-
-            // --- A. Calculate Base Salary first (if applicable and needed for percentage components) ---
-            let baseSalaryAmountForPercentageCalcs = 0;
-            const baseSalarySetting = employeeSettings.find(s =>
-                s.salaryComponent && s.salaryComponent.name.toLowerCase().includes('salaire de base') // Heuristic
-            );
-            if (baseSalarySetting && baseSalarySetting.salaryComponent.calculation_type === 'fixed') {
-                if (baseSalarySetting.amount !== null && baseSalarySetting.amount !== undefined) {
-                    baseSalaryAmountForPercentageCalcs = parseFloat(baseSalarySetting.amount);
-                } else if (baseSalarySetting.salaryComponent.amount !== null && baseSalarySetting.salaryComponent.amount !== undefined) {
-                    baseSalaryAmountForPercentageCalcs = parseFloat(baseSalarySetting.salaryComponent.amount);
+            // Determine Monthly Base Salary (Prerequisite for many calculations)
+            const baseSalaryCompSetting = employeeContext.settings.find(s => s.salaryComponent && s.salaryComponent.component_code === 'BASE_SALARY_MONTHLY');
+            let monthlyBaseSalaryAmount = 0;
+            if (baseSalaryCompSetting) {
+                if (baseSalaryCompSetting.amount !== null && baseSalaryCompSetting.amount !== undefined) {
+                    monthlyBaseSalaryAmount = parseFloat(baseSalarySetting.amount);
+                } else if (baseSalaryCompSetting.salaryComponent.amount !== null && baseSalaryCompSetting.salaryComponent.amount !== undefined) { // CORRECTED
+                    monthlyBaseSalaryAmount = parseFloat(baseSalaryCompSetting.salaryComponent.amount); // CORRECTED
                 }
             }
-            // At this point, baseSalaryAmountForPercentageCalcs holds the fixed base salary (annual or monthly),
-            // depending on how you’ve chosen to store it. If you store it monthly, you should annualize it:
-            // e.g. const taxableBaseAnnual = baseSalaryAmountForPercentageCalcs * 12;
-            // For simplicity below, we'll assume `baseSalaryAmountForPercentageCalcs` is already the annual figure.
-            const taxableBaseAnnual = baseSalaryAmountForPercentageCalcs;
+            employeeContext.monthlyBaseSalary = monthlyBaseSalaryAmount;
+            employeeContext.payslipItems.push({ component: baseSalaryCompSetting.salaryComponent, amount: monthlyBaseSalaryAmount, type: 'earning' });
+            employeeContext.grossPay += monthlyBaseSalaryAmount;
+            if (baseSalaryCompSetting.salaryComponent.is_cnss_subject) employeeContext.cnssBase += monthlyBaseSalaryAmount;
+            if (baseSalaryCompSetting.salaryComponent.is_amo_subject) employeeContext.amoBase += monthlyBaseSalaryAmount;
+            if (baseSalaryCompSetting.salaryComponent.is_taxable) employeeContext.taxableSalaryMonthly += monthlyBaseSalaryAmount;
 
-            // --- B. Iterate over employee's salary settings ---
-            for (const setting of employeeSettings) {
+            // Pass 1: Calculate Fixed Earnings (excluding base salary already processed)
+            console.log(`      Pass 1: Fixed Earnings`);
+            for (const setting of employeeContext.settings) {
                 const component = setting.salaryComponent;
-                if (!component) {
-                    console.warn(`      - Warning: Skipping setting for employee ${employee.id} due to missing component data.`);
-                    continue;
+                if (!component || component.component_code === 'BASE_SALARY_MONTHLY') continue;
+
+                if (component.type === 'earning' && component.calculation_type === 'fixed') {
+                    let itemAmountMonthly = parseFloat(setting.amount ?? component.amount ?? 0); // CORRECTED
+                    employeeContext.payslipItems.push({ component, amount: itemAmountMonthly, type: 'earning' });
+                    employeeContext.grossPay += itemAmountMonthly;
+                    if (component.is_cnss_subject) employeeContext.cnssBase += itemAmountMonthly;
+                    if (component.is_amo_subject) employeeContext.amoBase += itemAmountMonthly;
+                    if (component.is_taxable) employeeContext.taxableSalaryMonthly += itemAmountMonthly;
+                    console.log(`        - Fixed Earning: ${component.name}, Amount: ${itemAmountMonthly}`);
                 }
+            }
 
-                console.log(`      - Evaluating component: ${component.name} (Type: ${component.type}, Calc: ${component.calculation_type})`);
-                let itemAmount = 0;
+            // Pass 2: Calculate Percentage-Based Components (Earnings & Deductions, excluding CNSS/AMO/IGR)
+            console.log(`      Pass 2: Percentage-Based Components`);
+            for (const setting of employeeContext.settings) {
+                const component = setting.salaryComponent;
+                if (!component || component.calculation_type !== 'percentage') continue;
+                if (['CNSS_EMPLOYEE', 'AMO_EMPLOYEE', 'IGR_MONTHLY'].includes(component.component_code)) continue; // Handled in statutory pass
 
-                if (component.calculation_type === 'fixed') {
-                    if (setting.amount !== null && setting.amount !== undefined) {
-                        itemAmount = parseFloat(setting.amount);
-                    } else if (component.amount !== null && component.amount !== undefined) {
-                        itemAmount = parseFloat(component.amount);
-                    } else {
-                        console.warn(`        - Warning: Fixed component '${component.name}' for employee ${employee.id} has no amount defined.`);
-                    }
+                // Assuming percentage components are based on monthlyBaseSalary for now
+                // A more robust system would use component.basedOnComponentId or similar
+                let baseForPercentage = employeeContext.monthlyBaseSalary; // Default base
+                // Example: if (component.based_on_code === 'GROSS_SALARY') baseForPercentage = employeeContext.grossPay; (would need careful ordering)
 
-                } else if (component.calculation_type === 'percentage') {
-                    const percentage = parseFloat(component.percentage || setting.percentage || 0);
-                    // For Phase 2, assume system % components are based on `baseSalaryAmountForPercentageCalcs`
-                    itemAmount = taxableBaseAnnual * (percentage / 100);
-                    console.log(`        - Percentage (${percentage}%) of base (${taxableBaseAnnual}) = ${itemAmount}`);
+                let itemAmountMonthly = baseForPercentage * (parseFloat(component.percentage || 0) / 100);
+                itemAmountMonthly = parseFloat(itemAmountMonthly.toFixed(2));
 
-                } else if (component.calculation_type === 'formula') {
-                    // Here we detect IGR specifically
-                    if (component.name.toLowerCase().includes('igr') || component.name.toLowerCase().includes('impôt général sur le revenu')) {
-                        // Call calculateIGR using annual taxable base
-                        itemAmount = calculateIGR(taxableBaseAnnual);
-                        console.log(`        - IGR (formula) on base ${taxableBaseAnnual} = ${itemAmount}`);
-                    } else {
-                        console.warn(`        - Generic formula component '${component.name}' - logic not implemented.`);
-                    }
-
-                } else {
-                    console.warn(`        - Unsupported calculation_type '${component.calculation_type}' for component '${component.name}'.`);
-                }
-
-                itemAmount = parseFloat(itemAmount.toFixed(2));
-
-                // Add to payslip items (even if zero, for transparency)
-                payslipItemsData.push({
-                    tenantId, // tenantId for the PayslipItem itself
-                    componentId: component.id,
-                    description: component.name,
-                    type: component.type,
-                    amount: itemAmount,
-                });
-
-                // Accumulate totals for the employee's payslip
+                employeeContext.payslipItems.push({ component, amount: itemAmountMonthly, type: component.type });
                 if (component.type === 'earning') {
-                    grossPayEmployee += itemAmount;
-                } else if (component.type === 'deduction') {
-                    // If component is IGR or any tax (CNSS/AMO etc.), group under `taxesEmployee`
-                    if (component.name.toLowerCase().includes('igr') ||
-                        component.name.toLowerCase().includes('tax') ||
-                        component.name.toLowerCase().includes('cnss') ||
-                        component.name.toLowerCase().includes('amo')) {
-                        taxesEmployee += itemAmount;
-                    } else {
-                        deductionsEmployee += itemAmount;
-                    }
+                    employeeContext.grossPay += itemAmountMonthly;
+                    if (component.is_cnss_subject) employeeContext.cnssBase += itemAmountMonthly;
+                    if (component.is_amo_subject) employeeContext.amoBase += itemAmountMonthly;
+                    if (component.is_taxable) employeeContext.taxableSalaryMonthly += itemAmountMonthly;
+                    console.log(`        - Percentage Earning: ${component.name}, Amount: ${itemAmountMonthly}`);
+                } else { // Deduction
+                    employeeContext.otherDeductions += itemAmountMonthly;
+                    if (component.is_taxable) employeeContext.taxableSalaryMonthly -= itemAmountMonthly; // Deductions reducing taxable base
+                    console.log(`        - Percentage Deduction: ${component.name}, Amount: ${itemAmountMonthly}`);
                 }
-            } // End of settings loop for an employee
+            }
 
-            grossPayEmployee = parseFloat(grossPayEmployee.toFixed(2));
-            deductionsEmployee = parseFloat(deductionsEmployee.toFixed(2));
-            taxesEmployee = parseFloat(taxesEmployee.toFixed(2));
-            const netPayEmployee = parseFloat((grossPayEmployee - deductionsEmployee - taxesEmployee).toFixed(2));
+            // CNSS Cap for 2024 (example, replace with actual value from config/db)
+            const CNSS_CAP_MONTHLY = 6000;
+            employeeContext.cnssBase = Math.min(employeeContext.cnssBase, CNSS_CAP_MONTHLY);
+            // AMO is usually uncapped, but check specific regulations if needed.
 
-            // Create Payslip record for the employee
+            // Pass 3: Calculate Statutory Deductions (CNSS, AMO) based on their respective bases
+            console.log(`      Pass 3: Statutory Deductions (CNSS, AMO)`);
+            for (const setting of employeeContext.settings) {
+                const component = setting.salaryComponent;
+                if (!component) continue;
+
+                let itemAmountMonthly = 0;
+                if (component.component_code === 'CNSS_EMPLOYEE') {
+                    itemAmountMonthly = employeeContext.cnssBase * (parseFloat(component.percentage || 0) / 100);
+                    itemAmountMonthly = parseFloat(itemAmountMonthly.toFixed(2));
+                    employeeContext.taxes += itemAmountMonthly;
+                    employeeContext.taxableSalaryMonthly -= itemAmountMonthly; // CNSS is deductible for IGR
+                    console.log(`        - CNSS: Base=${employeeContext.cnssBase}, Amount: ${itemAmountMonthly}`);
+                } else if (component.component_code === 'AMO_EMPLOYEE') {
+                    itemAmountMonthly = employeeContext.amoBase * (parseFloat(component.percentage || 0) / 100);
+                    itemAmountMonthly = parseFloat(itemAmountMonthly.toFixed(2));
+                    employeeContext.taxes += itemAmountMonthly;
+                    employeeContext.taxableSalaryMonthly -= itemAmountMonthly; // AMO is deductible for IGR
+                    console.log(`        - AMO: Base=${employeeContext.amoBase}, Amount: ${itemAmountMonthly}`);
+                } else {
+                    continue; // Only process CNSS/AMO in this pass
+                }
+                employeeContext.payslipItems.push({ component, amount: itemAmountMonthly, type: 'deduction' });
+            }
+
+            // Calculate Net Taxable Annual for IGR
+            // Professional expenses deduction (e.g., 20% capped at 30,000 MAD annually / 2500 MAD monthly)
+            // This is a simplification; actual rules for frais professionnels are more nuanced.
+            const fraisProPercentage = 0.20; // 20%
+            const fraisProCapAnnual = 30000;
+            const fraisProCapMonthly = fraisProCapAnnual / 12;
+
+            let professionalExpensesMonthly = employeeContext.taxableSalaryMonthly * fraisProPercentage;
+            professionalExpensesMonthly = Math.min(professionalExpensesMonthly, fraisProCapMonthly);
+            professionalExpensesMonthly = parseFloat(professionalExpensesMonthly.toFixed(2));
+
+            employeeContext.taxableSalaryMonthly -= professionalExpensesMonthly;
+            employeeContext.taxableSalaryMonthly = Math.max(0, employeeContext.taxableSalaryMonthly); // Ensure not negative
+            employeeContext.netTaxableAnnual = employeeContext.taxableSalaryMonthly * 12;
+
+            // Pass 4: Calculate IGR (Formula-Based Deduction)
+            console.log(`      Pass 4: IGR Calculation`);
+            const igrComponentSetting = employeeContext.settings.find(s => s.salaryComponent && s.salaryComponent.component_code === 'IGR_MONTHLY');
+            if (igrComponentSetting) {
+                const igrAnnual = calculateIGR(employeeContext.netTaxableAnnual);
+                employeeContext.igrMonthly = parseFloat((igrAnnual / 12).toFixed(2));
+                employeeContext.taxes += employeeContext.igrMonthly;
+                employeeContext.payslipItems.push({ component: igrComponentSetting.salaryComponent, amount: employeeContext.igrMonthly, type: 'deduction' });
+                console.log(`        - IGR: NetTaxableAnnual=${employeeContext.netTaxableAnnual}, IGR_Annual=${igrAnnual}, IGR_Monthly=${employeeContext.igrMonthly}`);
+            }
+
+            // Pass 5: Other Fixed Deductions
+            console.log(`      Pass 5: Other Fixed Deductions`);
+            for (const setting of employeeContext.settings) {
+                const component = setting.salaryComponent;
+                if (!component || component.component_code === 'BASE_SALARY_MONTHLY') continue;
+                if (['CNSS_EMPLOYEE', 'AMO_EMPLOYEE', 'IGR_MONTHLY'].includes(component.component_code)) continue;
+                if (component.calculation_type === 'percentage') continue; // Already handled
+
+                if (component.type === 'deduction' && component.calculation_type === 'fixed') {
+                    let itemAmountMonthly = parseFloat(setting.amount ?? component.amount ?? 0);
+                    employeeContext.payslipItems.push({ component, amount: itemAmountMonthly, type: 'deduction' });
+                    employeeContext.otherDeductions += itemAmountMonthly;
+                     // Assuming other fixed deductions might also reduce taxable base if not already accounted for
+                    // This needs clarification based on specific component nature.
+                    // if (component.is_taxable) employeeContext.taxableSalaryMonthly -= itemAmountMonthly; // This logic is tricky here
+                    console.log(`        - Fixed Deduction: ${component.name}, Amount: ${itemAmountMonthly}`);
+                }
+            }
+
+            employeeContext.totalDeductions = employeeContext.taxes + employeeContext.otherDeductions;
+            const netPayEmployee = parseFloat((employeeContext.grossPay - employeeContext.totalDeductions).toFixed(2));
+
+            const finalPayslipItemsData = [];
+            for (const item of employeeContext.payslipItems) {
+                if (item.amount !== 0 || await componentAllowsZeroAmount(item.component?.id)) {
+                    finalPayslipItemsData.push({
+                        tenantId,
+                        componentId: item.component.id,
+                        description: item.component.name,
+                        type: item.type,
+                        amount: item.amount,
+                    });
+                }
+            }
+
             const payslip = await Payslip.create({
-                tenantId,
-                payrollRunId: payrollRun.id,
-                employeeId: employee.id,
-                grossPay: grossPayEmployee,
-                deductions: deductionsEmployee,
-                taxes: taxesEmployee,
+                tenantId, payrollRunId: payrollRun.id, employeeId: employee.id,
+                grossPay: employeeContext.grossPay,
+                deductions: employeeContext.otherDeductions, // Store non-statutory deductions
+                taxes: employeeContext.taxes,              // Store statutory (CNSS, AMO, IGR)
                 netPay: netPayEmployee,
             }, { transaction });
 
-            // Bulk create PayslipItems for this payslip
-            const itemsToCreate = payslipItemsData.map(item => ({ ...item, payslipId: payslip.id }));
-            if (itemsToCreate.length > 0) {
-                await PayslipItem.bulkCreate(itemsToCreate, { transaction });
+            if (finalPayslipItemsData.length > 0) {
+                await PayslipItem.bulkCreate(finalPayslipItemsData.map(item => ({ ...item, payslipId: payslip.id })), { transaction });
             }
             createdPayslips.push(payslip);
-            console.log(`      - Created Payslip ID: ${payslip.id}, Gross: ${grossPayEmployee}, Deductions: ${deductionsEmployee}, Taxes: ${taxesEmployee}, Net: ${netPayEmployee}`);
+            console.log(`      - Created Payslip ID: ${payslip.id}, Gross: ${employeeContext.grossPay}, Other Deductions: ${employeeContext.otherDeductions}, Taxes: ${employeeContext.taxes}, Net: ${netPayEmployee}`);
 
-            // Accumulate run totals
-            totalGrossPayRun += grossPayEmployee;
-            totalDeductionsRun += deductionsEmployee; // Non-tax deductions
-            totalTaxesRun += taxesEmployee;       // Tax deductions
+            totalGrossPayRun += employeeContext.grossPay;
+            totalDeductionsRun += employeeContext.otherDeductions;
+            totalTaxesRun += employeeContext.taxes;
+        }
 
-        } // End of employee loop
-
-        // --- 5. Update PayrollRun with Aggregated Totals and Final Status ---
         totalGrossPayRun = parseFloat(totalGrossPayRun.toFixed(2));
-        totalDeductionsRun = parseFloat(totalDeductionsRun.toFixed(2));
-        totalTaxesRun = parseFloat(totalTaxesRun.toFixed(2));
-        const totalNetPayRun = parseFloat((totalGrossPayRun - totalDeductionsRun - totalTaxesRun).toFixed(2));
+        totalDeductionsRun = parseFloat(totalDeductionsRun.toFixed(2)); // sum of non-statutory
+        totalTaxesRun = parseFloat(totalTaxesRun.toFixed(2));       // sum of statutory
+        const totalNetPayRun = parseFloat((totalGrossPayRun - (totalDeductionsRun + totalTaxesRun)).toFixed(2));
 
         await payrollRun.update({
             totalGrossPay: totalGrossPayRun,
-            // Store overall deductions (tax + non-tax) in one field, if that’s how you want to track it:
-            totalDeductions: parseFloat((totalDeductionsRun + totalTaxesRun).toFixed(2)),
+            totalDeductions: parseFloat((totalDeductionsRun + totalTaxesRun).toFixed(2)), // Sum of all deductions
             totalNetPay: totalNetPayRun,
             status: 'completed',
             total_employees: activeEmployees.length
         }, { transaction });
-        console.log(`  - PayrollRun ID: ${payrollRun.id} updated. Gross: ${totalGrossPayRun}, Deductions (incl. tax): ${(totalDeductionsRun + totalTaxesRun).toFixed(2)}, Net: ${totalNetPayRun}`);
+        console.log(`  - PayrollRun ID: ${payrollRun.id} updated. Gross: ${totalGrossPayRun}, Total Deductions: ${(totalDeductionsRun + totalTaxesRun).toFixed(2)}, Net: ${totalNetPayRun}`);
 
-        // --- 6. Commit Transaction ---
         await transaction.commit();
         console.log('✅ Payroll processing completed successfully and transaction committed.');
         return { payrollRun, payslips: createdPayslips };
@@ -362,4 +338,12 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
     }
 }
 
-module.exports = { processPayroll, calculatePeriodStartDate, calculateIGR };
+async function componentAllowsZeroAmount(componentId) {
+    if (!componentId) return false;
+    const component = await SalaryComponent.findByPk(componentId);
+    // Example: Show 'Salaire de Base' even if zero for transparency, or other specific components.
+    // This could be driven by a flag on the SalaryComponent model itself, e.g., `show_if_zero`.
+    return component && component.component_code === 'BASE_SALARY_MONTHLY';
+}
+
+module.exports = { processPayroll, calculatePeriodStartDate, calculateIGR, componentAllowsZeroAmount };
