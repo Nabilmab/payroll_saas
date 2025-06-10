@@ -9,14 +9,13 @@ const { sequelize, Tenant, User, Role, Department, Employee, SalaryComponent, Pa
 /**
  * @typedef {Object} TenantData
  * @property {string} name - The name of the tenant company.
- * @property {string} [description] - The description of the tenant company.
- * @property {string} schema_name - The schema name for the tenant.
+ * @property {string} [slogan] - The slogan of the tenant company.
  * @property {Tenant?} instance - Will store the Sequelize instance after creation.
  */
 const tenantsData = [
-  { name: "TechSolutions SARL", description: "Solutions technologiques innovantes pour le Maroc.", schema_name: "techsolutions" },
-  { name: "Artisanat Marocain Coop", description: "L'artisanat traditionnel marocain à portée de main.", schema_name: "artisanat" },
-  { name: "Services Financiers Al Maghrib", description: "Votre partenaire financier de confiance.", schema_name: "sfmaghrib" },
+  { name: "TechSolutions SARL", slogan: "Solutions technologiques innovantes pour le Maroc." },
+  { name: "Artisanat Marocain Coop", slogan: "L'artisanat traditionnel marocain à portée de main." },
+  { name: "Services Financiers Al Maghrib", slogan: "Votre partenaire financier de confiance." },
 ];
 
 /**
@@ -147,13 +146,12 @@ async function seedTenants() {
   console.log('Seeding tenants...');
   for (const tenantData of tenantsData) {
     const [tenant, created] = await Tenant.findOrCreate({
-      where: { schema_name: tenantData.schema_name }, // Keep using schema_name as the unique identifier
-      defaults: tenantData, // Use the concise tenantData for defaults
+      where: { name: tenantData.name },
+      defaults: { name: tenantData.name, slogan: tenantData.slogan },
     });
     tenantData.instance = tenant; // Store instance for later use
-    // Ensure logging reflects the use of schema_name, which it likely already does from the previous subtask.
-    if (created) console.log(`Tenant '${tenant.name}' created with schema '${tenant.schema_name}'.`);
-    else console.log(`Tenant '${tenant.name}' with schema '${tenant.schema_name}' already exists.`);
+    if (created) console.log(`Tenant '${tenant.name}' created.`);
+    else console.log(`Tenant '${tenant.name}' already exists.`);
   }
 }
 
@@ -161,7 +159,7 @@ async function seedRoles() {
   console.log('Seeding roles...');
   for (const tenantData of tenantsData) {
     if (!tenantData.instance) {
-      console.error(`Tenant instance for ${tenantData.name} (schema: ${tenantData.schema_name}) not found. Skipping roles.`);
+      console.error(`Tenant instance for ${tenantData.name} not found. Skipping roles.`);
       continue;
     }
     for (const roleData of rolesData) { // Using the generic rolesData for each tenant
@@ -175,8 +173,8 @@ async function seedRoles() {
       });
       // Storing role instances might be complex if rolesData is reused.
       // Instead, we'll fetch them as needed in seedUsers.
-      if (created) console.log(`Role '${role.name}' for tenant '${tenantData.instance.name}' (schema: ${tenantData.instance.schema_name}) created.`);
-      else console.log(`Role '${role.name}' for tenant '${tenantData.instance.name}' (schema: ${tenantData.instance.schema_name}) already exists.`);
+      if (created) console.log(`Role '${role.name}' for tenant '${tenantData.instance.name}' created.`);
+      else console.log(`Role '${role.name}' for tenant '${tenantData.instance.name}' already exists.`);
     }
   }
 }
@@ -184,7 +182,7 @@ async function seedRoles() {
 async function seedUsers() {
   console.log('Seeding users...');
   for (const userData of usersData) {
-    const tenant = tenantsData.find(t => t.name === userData.tenantName)?.instance; // Assuming tenantName in usersData still refers to the 'name' property
+    const tenant = tenantsData.find(t => t.name === userData.tenantName)?.instance;
     if (!tenant) {
       console.error(`Tenant '${userData.tenantName}' not found for user '${userData.email}'. Skipping.`);
       continue;
@@ -215,10 +213,10 @@ async function seedUsers() {
         },
       });
       if (rolesToAssign.length !== userData.roleNames.length) {
-        console.warn(`Not all roles (${userData.roleNames.join(', ')}) found for user '${userData.email}' in tenant '${tenant.name}' (schema: ${tenant.schema_name}). Found: ${rolesToAssign.map(r => r.name).join(', ')}`);
+        console.warn(`Not all roles (${userData.roleNames.join(', ')}) found for user '${userData.email}' in tenant '${tenant.name}'. Found: ${rolesToAssign.map(r => r.name).join(', ')}`);
       }
       await user.setRoles(rolesToAssign); // setRoles handles the UserRole join table
-      console.log(`Set roles for user '${user.email}' to: ${rolesToAssign.map(r => r.name).join(', ')} for tenant '${tenant.name}' (schema: ${tenant.schema_name})`);
+      console.log(`Set roles for user '${user.email}' to: ${rolesToAssign.map(r => r.name).join(', ')}`);
     }
   }
 }
@@ -226,7 +224,7 @@ async function seedUsers() {
 async function seedDepartments() {
   console.log('Seeding departments...');
   for (const deptData of departmentsData) {
-    const tenant = tenantsData.find(t => t.name === deptData.tenantName)?.instance; // Assuming tenantName in departmentsData still refers to the 'name' property
+    const tenant = tenantsData.find(t => t.name === deptData.tenantName)?.instance;
     if (!tenant) {
       console.error(`Tenant '${deptData.tenantName}' not found for department '${deptData.name}'. Skipping.`);
       continue;
@@ -246,8 +244,8 @@ async function seedDepartments() {
       },
     });
     deptData.instance = department;
-    if (created) console.log(`Department '${department.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) created.`);
-    else console.log(`Department '${department.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) already exists.`);
+    if (created) console.log(`Department '${department.name}' for tenant '${tenant.name}' created.`);
+    else console.log(`Department '${department.name}' for tenant '${tenant.name}' already exists.`);
   }
 }
 
@@ -260,22 +258,22 @@ async function seedEmployees() {
   for (const tenantData of tenantsData) { // Iterate through tenants
     const tenant = tenantData.instance;
     if (!tenant) {
-      console.error(`Tenant instance for ${tenantData.name} (schema: ${tenantData.schema_name}) not found. Skipping employees for this tenant.`);
+      console.error(`Tenant instance for ${tenantData.name} not found. Skipping employees for this tenant.`);
       continue;
     }
 
-    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name); // Assuming tenantName in employeesData still refers to the 'name' property
+    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name);
 
     for (const empData of tenantEmployeesData) {
-      const department = departmentsData.find(d => d.name === empData.departmentName && d.tenantName === tenant.name)?.instance; // Assuming tenantName in departmentsData still refers to the 'name' property
+      const department = departmentsData.find(d => d.name === empData.departmentName && d.tenantName === tenant.name)?.instance;
       if (!department) {
-        console.error(`Department '${empData.departmentName}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) not found for employee '${empData.email}'. Skipping.`);
+        console.error(`Department '${empData.departmentName}' for tenant '${tenant.name}' not found for employee '${empData.email}'. Skipping.`);
         continue;
       }
 
-      const user = usersData.find(u => u.email === empData.email && u.tenantName === tenant.name)?.instance; // Assuming tenantName in usersData still refers to the 'name' property
+      const user = usersData.find(u => u.email === empData.email && u.tenantName === tenant.name)?.instance;
       if (!user) {
-        console.error(`User with email '${empData.email}' for employee not found in tenant '${tenant.name}' (schema: ${tenant.schema_name}). Skipping employee.`);
+        console.error(`User with email '${empData.email}' for employee not found in tenant '${tenant.name}'. Skipping employee.`);
         continue;
       }
 
@@ -301,12 +299,12 @@ async function seedEmployees() {
       });
 
       if (created) {
-        console.log(`Created employee ${employee.first_name} ${employee.last_name} (${employee.email}) for tenant ${tenant.name} (schema: ${tenant.schema_name})`);
+        console.log(`Created employee ${employee.first_name} ${employee.last_name} (${employee.email}) for tenant ${tenant.name}`);
       } else {
-        console.log(`Employee ${employee.first_name} ${employee.last_name} (${employee.email}) already exists for tenant ${tenant.name} (schema: ${tenant.schema_name})`);
+        console.log(`Employee ${employee.first_name} ${employee.last_name} (${employee.email}) already exists for tenant ${tenant.name}`);
       }
       // Store instance using a key that uniquely identifies the employee within the context of the seed data (email + tenantName for safety, though email is globally unique for users/employees here)
-      employeeInstanceMap[`${employee.email}_${tenant.name}`] = employee; // Keyed by tenant name for consistency, though schema_name is the new unique ID for tenants
+      employeeInstanceMap[`${employee.email}_${tenant.name}`] = employee;
       empData.instance = employee; // also keep it on empData for reference if needed, though map is primary for lookup
     }
   }
@@ -317,30 +315,30 @@ async function seedEmployees() {
   for (const tenantData of tenantsData) { // Iterate through tenants again
     const tenant = tenantData.instance;
     if (!tenant) {
-      console.error(`Tenant instance for ${tenantData.name} (schema: ${tenantData.schema_name}) not found during manager linking pass. Skipping.`);
+      console.error(`Tenant instance for ${tenantData.name} not found during manager linking pass. Skipping.`);
       continue;
     }
-    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name); // Assuming tenantName in employeesData still refers to the 'name' property
+    const tenantEmployeesData = employeesData.filter(emp => emp.tenantName === tenant.name);
 
     for (const empData of tenantEmployeesData) {
       if (empData.managerEmail) { // 'managerEmail' instead of 'reportingManagerEmail'
-        const currentEmployee = employeeInstanceMap[`${empData.email}_${tenant.name}`]; // Keyed by tenant name
+        const currentEmployee = employeeInstanceMap[`${empData.email}_${tenant.name}`];
         // Manager must be within the same tenant
-        const manager = employeeInstanceMap[`${empData.managerEmail}_${tenant.name}`]; // Keyed by tenant name
+        const manager = employeeInstanceMap[`${empData.managerEmail}_${tenant.name}`];
 
         if (currentEmployee && manager) {
           if (currentEmployee.id === manager.id) {
-            console.warn(`Employee ${currentEmployee.email} (Tenant: ${tenant.name}, schema: ${tenant.schema_name}) cannot be their own manager. Skipping self-assignment.`);
+            console.warn(`Employee ${currentEmployee.email} (Tenant: ${tenant.name}) cannot be their own manager. Skipping self-assignment.`);
             continue;
           }
           currentEmployee.reportingManagerId = manager.id; // Ensure Employee model has 'reportingManagerId'
           await currentEmployee.save();
-          console.log(`Linked employee ${currentEmployee.email} to manager ${manager.email} for tenant ${tenant.name} (schema: ${tenant.schema_name})`);
+          console.log(`Linked employee ${currentEmployee.email} to manager ${manager.email} for tenant ${tenant.name}`);
         } else if (!manager) {
-          console.warn(`Manager with email ${empData.managerEmail} (Tenant: ${tenant.name}, schema: ${tenant.schema_name}) not found in instance map for employee ${empData.email}.`);
+          console.warn(`Manager with email ${empData.managerEmail} (Tenant: ${tenant.name}) not found in instance map for employee ${empData.email}.`);
         } else if (!currentEmployee) {
           // This case should ideally not happen if Pass 1 is correct
-          console.warn(`Employee with email ${empData.email} (Tenant: ${tenant.name}, schema: ${tenant.schema_name}) was not found in the instance map during Pass 2.`);
+          console.warn(`Employee with email ${empData.email} (Tenant: ${tenant.name}) was not found in the instance map during Pass 2.`);
         }
       }
     }
@@ -359,7 +357,7 @@ async function seedSalaryComponents() {
     }
     const defaults = {
         name: scData.name,
-        type: scData.type, // Assuming tenantName in salaryComponentsData still refers to the 'name' property
+        type: scData.type,
         amount: scData.amount || null,
         percentage: scData.percentage || null,
         isTaxApplicable: scData.isTaxApplicable !== undefined ? scData.isTaxApplicable : null,
@@ -368,11 +366,11 @@ async function seedSalaryComponents() {
         // basedOnComponentId: scData.basedOnComponentId || null, // Example if it exists
     };
     if (scData.basedOnComponentId) { // Only add if present in data
-        const basedOn = salaryComponentsData.find(s => s.name === scData.basedOnComponentName && s.tenantName === scData.tenantName)?.instance; // Assuming tenantName refers to 'name'
+        const basedOn = salaryComponentsData.find(s => s.name === scData.basedOnComponentName && s.tenantName === scData.tenantName)?.instance;
         if (basedOn) {
             defaults.basedOnComponentId = basedOn.id;
         } else {
-            console.warn(`Based on component '${scData.basedOnComponentName}' not found for '${scData.name}' in tenant '${tenant.name}' (schema: ${tenant.schema_name}).`);
+            console.warn(`Based on component '${scData.basedOnComponentName}' not found for '${scData.name}'.`);
         }
     }
 
@@ -381,15 +379,15 @@ async function seedSalaryComponents() {
       defaults: defaults,
     });
     scData.instance = component;
-    if (created) console.log(`SalaryComponent '${component.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) created.`);
-    else console.log(`SalaryComponent '${component.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) already exists.`);
+    if (created) console.log(`SalaryComponent '${component.name}' for tenant '${tenant.name}' created.`);
+    else console.log(`SalaryComponent '${component.name}' for tenant '${tenant.name}' already exists.`);
   }
 }
 
 async function seedPaySchedules() {
   console.log('Seeding pay schedules...');
   for (const psData of paySchedulesData) {
-    const tenant = tenantsData.find(t => t.name === psData.tenantName)?.instance; // Assuming tenantName in paySchedulesData still refers to the 'name' property
+    const tenant = tenantsData.find(t => t.name === psData.tenantName)?.instance;
     if (!tenant) {
       console.error(`Tenant '${psData.tenantName}' not found for pay schedule '${psData.name}'. Skipping.`);
       continue;
@@ -405,8 +403,8 @@ async function seedPaySchedules() {
       },
     });
     psData.instance = schedule;
-    if (created) console.log(`PaySchedule '${schedule.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) created.`);
-    else console.log(`PaySchedule '${schedule.name}' for tenant '${tenant.name}' (schema: ${tenant.schema_name}) already exists.`);
+    if (created) console.log(`PaySchedule '${schedule.name}' for tenant '${tenant.name}' created.`);
+    else console.log(`PaySchedule '${schedule.name}' for tenant '${tenant.name}' already exists.`);
   }
 }
 
