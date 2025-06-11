@@ -46,6 +46,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'reportees',
         foreignKey: 'reportingManagerId',
       });
+
+      Employee.hasMany(models.EmployeeDependent, {
+        foreignKey: 'employeeId',
+        as: 'dependents',
+      });
     }
   }
 

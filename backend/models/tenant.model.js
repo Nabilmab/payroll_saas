@@ -38,6 +38,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'tenantId',
         as: 'roles',
       });
+
+      Tenant.hasMany(models.EmployeeDependent, {
+        foreignKey: 'tenantId',
+        as: 'tenantDependents',
+      });
     }
   }
   Tenant.init({
