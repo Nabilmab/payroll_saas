@@ -118,7 +118,8 @@ app.get('/api/salary-components', authenticateAndAttachUser, async (req, res) =>
 app.post('/api/salary-components', authenticateAndAttachUser, /* authorizeAdmin, */ async (req, res) => {
     try {
         const { tenantId } = req.user;
-        const { name, description, type, default_amount, is_taxable, payslip_display_order } = req.body;
+        // Destructure calculation_type, amount, and percentage
+        const { name, description, type, calculation_type, amount, percentage, is_taxable, payslip_display_order } = req.body;
 
         if (!name || !type) {
             return res.status(400).json({ error: 'Name and type are required.' });
@@ -127,15 +128,41 @@ app.post('/api/salary-components', authenticateAndAttachUser, /* authorizeAdmin,
             return res.status(400).json({ error: "Type must be 'earning' or 'deduction'." });
         }
 
-        const newSalaryComponent = await SalaryComponent.create({
-            tenantId, name, description, type,
-            calculation_type: 'fixed',
-            amount: default_amount ? parseFloat(default_amount) : null,
+        // Validate calculation_type
+        const validCalculationTypes = ['fixed', 'percentage', 'formula'];
+        if (!calculation_type || !validCalculationTypes.includes(calculation_type)) {
+            return res.status(400).json({ error: `Calculation type must be one of: ${validCalculationTypes.join(', ')}.` });
+        }
+
+        const newSalaryComponentData = {
+            tenantId,
+            name,
+            description,
+            type,
+            calculation_type, // Use destructured calculation_type
             is_taxable: !!is_taxable,
             is_system_defined: false,
             is_active: true,
-            payslip_display_order: payslip_display_order ? parseInt(payslip_display_order, 10) : null
-        });
+            payslip_display_order: payslip_display_order ? parseInt(payslip_display_order, 10) : null,
+            amount: null, // Initialize amount as null
+            percentage: null // Initialize percentage as null
+        };
+
+        // Conditionally set amount or percentage
+        if (calculation_type === 'fixed') {
+            if (amount === undefined || amount === null) {
+                return res.status(400).json({ error: 'Amount is required for fixed calculation type.' });
+            }
+            newSalaryComponentData.amount = parseFloat(amount);
+        } else if (calculation_type === 'percentage') {
+            if (percentage === undefined || percentage === null) {
+                return res.status(400).json({ error: 'Percentage is required for percentage calculation type.' });
+            }
+            newSalaryComponentData.percentage = parseFloat(percentage);
+        }
+        // For 'formula', amount and percentage remain null
+
+        const newSalaryComponent = await SalaryComponent.create(newSalaryComponentData);
         res.status(201).json(newSalaryComponent);
     } catch (error) {
         if (error.name === 'SequelizeUniqueConstraintError') {
@@ -152,7 +179,7 @@ app.put('/api/salary-components/:componentId', authenticateAndAttachUser, /* aut
     try {
         const { tenantId } = req.user;
         const { componentId } = req.params;
-        const { name, description, type, default_amount, is_taxable, is_active, payslip_display_order } = req.body;
+        const { name, description, type, calculation_type, amount, percentage, is_taxable, is_active, payslip_display_order } = req.body;
 
         const component = await SalaryComponent.findOne({
             where: { id: componentId, tenantId: tenantId, is_system_defined: false }
@@ -162,15 +189,63 @@ app.put('/api/salary-components/:componentId', authenticateAndAttachUser, /* aut
             return res.status(404).json({ error: 'Custom salary component not found or access denied.' });
         }
 
-        if (name) component.name = name;
+        // Update basic fields
+        if (name !== undefined) component.name = name;
         if (description !== undefined) component.description = description;
-        if (type) {
+        if (type !== undefined) {
             if (!['earning', 'deduction'].includes(type)) {
                 return res.status(400).json({ error: "Invalid type. Must be 'earning' or 'deduction'." });
             }
             component.type = type;
         }
-        if (default_amount !== undefined) component.amount = default_amount ? parseFloat(default_amount) : null;
+
+        // 1. Update calculation_type if provided, and validate
+        if (calculation_type !== undefined) {
+            const validCalculationTypes = ['fixed', 'percentage', 'formula'];
+            if (!validCalculationTypes.includes(calculation_type)) {
+                return res.status(400).json({ error: `Calculation type must be one of: ${validCalculationTypes.join(', ')}.` });
+            }
+            component.calculation_type = calculation_type;
+        }
+
+        // 2. Apply logic based on the component's final calculation_type
+        // (which could be the original one or the one updated above)
+        if (component.calculation_type === 'fixed') {
+            component.percentage = null; // Ensure percentage is null for fixed type
+            if (amount !== undefined) { // Only update amount if it's actually provided
+                if (amount === null) {
+                    component.amount = null;
+                } else {
+                    const parsedAmount = parseFloat(amount);
+                    if (isNaN(parsedAmount)) {
+                        return res.status(400).json({ error: 'Invalid amount: must be a number or null for fixed calculation type.' });
+                    }
+                    component.amount = parsedAmount;
+                }
+            }
+            // If amount is not provided in req.body, component.amount remains unchanged (unless calculation_type changed to fixed)
+            // If calculation_type just changed to 'fixed', amount might be null from previous type, or its existing value.
+            // If amount is not in req.body for an existing fixed type, it simply means no update to amount.
+        } else if (component.calculation_type === 'percentage') {
+            component.amount = null; // Ensure amount is null for percentage type
+            if (percentage !== undefined) { // Only update percentage if it's actually provided
+                if (percentage === null) {
+                    component.percentage = null;
+                } else {
+                    const parsedPercentage = parseFloat(percentage);
+                    if (isNaN(parsedPercentage)) {
+                        return res.status(400).json({ error: 'Invalid percentage: must be a number or null for percentage calculation type.' });
+                    }
+                    component.percentage = parsedPercentage;
+                }
+            }
+            // If percentage is not provided in req.body, component.percentage remains unchanged (unless calculation_type changed to percentage)
+        } else if (component.calculation_type === 'formula') {
+            component.amount = null;
+            component.percentage = null;
+        }
+
+        // Update other fields
         if (is_taxable !== undefined) component.is_taxable = !!is_taxable;
         if (is_active !== undefined) component.is_active = !!is_active;
         if (payslip_display_order !== undefined) component.payslip_display_order = payslip_display_order ? parseInt(payslip_display_order, 10) : null;
