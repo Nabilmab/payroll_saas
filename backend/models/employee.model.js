@@ -51,6 +51,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'employeeId',
         as: 'dependents',
       });
+
+      Employee.hasMany(models.Payslip, { // Added Payslip association
+        foreignKey: 'employeeId', // This is the foreign key in the Payslip model
+        as: 'payslips'        // Alias to access payslips from an employee instance
+      });
     }
   }
 
