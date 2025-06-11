@@ -39,7 +39,13 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
       return component.amount != null ? component.amount.toFixed(2) : 'N/A';
     }
     if (component.calculation_type === 'percentage') {
-      return component.percentage != null ? `${component.percentage.toFixed(2)}%` : 'N/A';
+      if (component.percentage != null) {
+        const numPercentage = parseFloat(String(component.percentage));
+        if (!isNaN(numPercentage)) {
+          return `${numPercentage.toFixed(2)}%`;
+        }
+      }
+      return 'N/A';
     }
     if (component.calculation_type === 'formula') {
       return 'Formula'; // Or some other placeholder
