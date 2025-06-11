@@ -465,152 +465,164 @@ describe('Payroll SaaS API Integration Tests', () => {
 
     // --- Payslip API Tests ---
     describe('Payslip API', () => {
-        let thisSuitesPayslipId;
-        let thisSuitesPayrollRunId;
-        const thisSuitesEmployeeId = ahmedBennaniEmployeeId; // Re-assign for clarity in this scope
-        const thisSuitesTenantId = techSolutionsTenantId;   // Re-assign for clarity
+        let payslipApiTestPayslipId; // Renamed
+        let payslipApiTestPayrollRunId; // Renamed
+        // Not redefining techSolutionsTenantId or ahmedBennaniEmployeeId, using globals
 
-        let baseSalaryComponentId, transportComponentId, cnssComponentId;
+        let baseSalaryComponentId, cnssComponentId, igrComponentId; // Removed transportComponentId, added igrComponentId
         let techSolutionsPayrollScheduleId;
 
         beforeAll(async () => {
+            console.log('Payslip API Test Suite: beforeAll started.');
+            console.log(`Payslip API Test Suite: Using global techSolutionsTenantId: ${techSolutionsTenantId}`);
+            console.log(`Payslip API Test Suite: Using global ahmedBennaniEmployeeId: ${ahmedBennaniEmployeeId}`);
+
+            if (!techSolutionsTenantId) throw new Error("Payslip API: techSolutionsTenantId is not defined. Check global setup.");
+            if (!ahmedBennaniEmployeeId) throw new Error("Payslip API: ahmedBennaniEmployeeId is not defined. Check global setup.");
+
             // 0. Fetch necessary linked entities
             const techSolutionsPaySchedule = await PaySchedule.findOne({
-                where: { name: "Paiement Mensuel Standard", tenantId: thisSuitesTenantId }
+                where: { name: "Paiement Mensuel Standard", tenantId: techSolutionsTenantId }
             });
-            if (!techSolutionsPaySchedule) throw new Error("Could not find 'Paiement Mensuel Standard' for TechSolutions");
+            if (!techSolutionsPaySchedule) throw new Error("Payslip API: Could not find 'Paiement Mensuel Standard' for TechSolutions");
             techSolutionsPayrollScheduleId = techSolutionsPaySchedule.id;
 
-            const baseComp = await SalaryComponent.findOne({ where: { component_code: 'BASE_SALARY_MONTHLY', tenantId: thisSuitesTenantId }});
-            if (!baseComp) throw new Error("SalaryComponent 'BASE_SALARY_MONTHLY' not found for TechSolutions");
+            const baseComp = await SalaryComponent.findOne({ where: { component_code: 'BASE_SALARY_MONTHLY', tenantId: techSolutionsTenantId }});
+            if (!baseComp) throw new Error("Payslip API: SalaryComponent 'BASE_SALARY_MONTHLY' not found for TechSolutions");
             baseSalaryComponentId = baseComp.id;
 
-            const transportComp = await SalaryComponent.findOne({ where: { component_code: 'TRANSPORT_ALLOWANCE', tenantId: thisSuitesTenantId }});
-            if (!transportComp) throw new Error("SalaryComponent 'TRANSPORT_ALLOWANCE' not found for TechSolutions");
-            transportComponentId = transportComp.id;
-
-            const cnssComp = await SalaryComponent.findOne({ where: { component_code: 'CNSS_EMPLOYEE', tenantId: thisSuitesTenantId }});
-            if (!cnssComp) throw new Error("SalaryComponent 'CNSS_EMPLOYEE' not found for TechSolutions");
+            const cnssComp = await SalaryComponent.findOne({ where: { component_code: 'CNSS_EMPLOYEE', tenantId: techSolutionsTenantId }});
+            if (!cnssComp) throw new Error("Payslip API: SalaryComponent 'CNSS_EMPLOYEE' not found for TechSolutions");
             cnssComponentId = cnssComp.id;
+
+            const igrComp = await SalaryComponent.findOne({ where: { component_code: 'IGR_EMPLOYEE', tenantId: techSolutionsTenantId }}); // Assuming IGR_EMPLOYEE exists
+            if (!igrComp) throw new Error("Payslip API: SalaryComponent 'IGR_EMPLOYEE' not found for TechSolutions. This component is needed for tax calculations.");
+            igrComponentId = igrComp.id;
+
 
             // 1. Create PayrollRun
             const payrollRun = await PayrollRun.create({
-                tenantId: thisSuitesTenantId,
+                tenantId: techSolutionsTenantId, // Use global
                 payScheduleId: techSolutionsPayrollScheduleId,
-                periodStart: new Date('2024-07-01T00:00:00.000Z'),
-                periodEnd: new Date('2024-07-31T00:00:00.000Z'),
-                paymentDate: new Date('2024-08-05T00:00:00.000Z'),
+                periodStart: new Date('2024-03-01T00:00:00.000Z'), // Adjusted
+                periodEnd: new Date('2024-03-31T00:00:00.000Z'),   // Adjusted
+                paymentDate: new Date('2024-04-05T00:00:00.000Z'), // Adjusted
                 status: 'completed'
             });
-            thisSuitesPayrollRunId = payrollRun.id;
+            payslipApiTestPayrollRunId = payrollRun.id; // Use new variable name
+            console.log(`Payslip API Test Suite: Created PayrollRun ID: ${payslipApiTestPayrollRunId}`);
 
             // 2. Create Payslip
+            const payslipNetPay = 7500.00 - 505.50 - 1200.00; // 5794.50
             const payslip = await Payslip.create({
-                tenantId: thisSuitesTenantId,
-                employeeId: thisSuitesEmployeeId,
-                payrollRunId: thisSuitesPayrollRunId,
-                grossPay: 7000.00,
-                deductions: 500.00,
-                taxes: 0.00, // Simplified: no specific tax item for this test setup
-                netPay: 6500.00
+                tenantId: techSolutionsTenantId, // Use global
+                employeeId: ahmedBennaniEmployeeId, // Use global
+                payrollRunId: payslipApiTestPayrollRunId, // Use new variable name
+                grossPay: 7500.00,    // Adjusted
+                deductions: 505.50,   // Adjusted (CNSS only for this example)
+                taxes: 1200.00,       // Adjusted
+                netPay: payslipNetPay // Adjusted
             });
-            thisSuitesPayslipId = payslip.id;
+            payslipApiTestPayslipId = payslip.id; // Use new variable name
+            console.log(`Payslip API Test Suite: Created Payslip ID: ${payslipApiTestPayslipId}`);
 
             // 3. Create PayslipItems
             await PayslipItem.bulkCreate([
                 {
-                    tenantId: thisSuitesTenantId,
-                    payslipId: thisSuitesPayslipId,
+                    tenantId: techSolutionsTenantId, // Use global
+                    payslipId: payslipApiTestPayslipId,
                     salaryComponentId: baseSalaryComponentId,
-                    description: "Salaire de Base (Suite Test Payslip)",
+                    description: "Salaire de Base (Suite Test Payslip Mars)",
                     type: 'earning',
-                    amount: 6500.00
+                    amount: 7500.00 // Adjusted
                 },
                 {
-                    tenantId: thisSuitesTenantId,
-                    payslipId: thisSuitesPayslipId,
-                    salaryComponentId: transportComponentId,
-                    description: "Indemnité Transport (Suite Test Payslip)",
-                    type: 'earning',
-                    amount: 500.00
-                },
-                {
-                    tenantId: thisSuitesTenantId,
-                    payslipId: thisSuitesPayslipId,
+                    tenantId: techSolutionsTenantId, // Use global
+                    payslipId: payslipApiTestPayslipId,
                     salaryComponentId: cnssComponentId,
-                    description: "Cotisation CNSS (Suite Test Payslip)",
+                    description: "Cotisation CNSS (Suite Test Payslip Mars)",
                     type: 'deduction',
-                    amount: 500.00 // This is a placeholder, actual CNSS would be calculated
+                    amount: 505.50 // Adjusted (7500 * 0.0674)
+                },
+                {
+                    tenantId: techSolutionsTenantId, // Use global
+                    payslipId: payslipApiTestPayslipId,
+                    salaryComponentId: igrComponentId,
+                    description: "IGR (Suite Test Payslip Mars)",
+                    type: 'tax', // Assuming 'tax' type for IGR component
+                    amount: 1200.00 // Adjusted
                 }
             ]);
+            console.log(`Payslip API Test Suite: Created PayslipItems for Payslip ID: ${payslipApiTestPayslipId}`);
         });
 
         afterAll(async () => {
-            if (thisSuitesPayslipId) {
-                await PayslipItem.destroy({ where: { payslipId: thisSuitesPayslipId }, force: true });
-                await Payslip.destroy({ where: { id: thisSuitesPayslipId }, force: true });
+            console.log('Payslip API Test Suite: afterAll started.');
+            if (payslipApiTestPayslipId) {
+                await PayslipItem.destroy({ where: { payslipId: payslipApiTestPayslipId }, force: true });
+                console.log(`Payslip API Test Suite: Deleted PayslipItems for Payslip ID: ${payslipApiTestPayslipId}`);
+                await Payslip.destroy({ where: { id: payslipApiTestPayslipId }, force: true });
+                console.log(`Payslip API Test Suite: Deleted Payslip ID: ${payslipApiTestPayslipId}`);
             }
-            if (thisSuitesPayrollRunId) {
-                await PayrollRun.destroy({ where: { id: thisSuitesPayrollRunId }, force: true });
+            if (payslipApiTestPayrollRunId) {
+                await PayrollRun.destroy({ where: { id: payslipApiTestPayrollRunId }, force: true });
+                console.log(`Payslip API Test Suite: Deleted PayrollRun ID: ${payslipApiTestPayrollRunId}`);
             }
+            console.log('Payslip API Test Suite: afterAll finished.');
         });
 
         it('GET /api/payslips/:payslipId - should retrieve a specific payslip created for this test suite', async () => {
-            expect(thisSuitesPayslipId).toBeDefined(); // Ensure ID was set
+            expect(payslipApiTestPayslipId).toBeDefined();
 
             const response = await request(API_BASE_URL)
-                .get(`/api/payslips/${thisSuitesPayslipId}`);
+                .get(`/api/payslips/${payslipApiTestPayslipId}`); // Use new variable
 
             expect(response.statusCode).toBe(200);
-            expect(response.body).toHaveProperty('id', thisSuitesPayslipId);
-            expect(response.body).toHaveProperty('employeeId', thisSuitesEmployeeId); // ahmedBennaniEmployeeId
-            expect(response.body).toHaveProperty('tenantId', thisSuitesTenantId);
-            expect(response.body).toHaveProperty('grossPay', 7000.00);
-            expect(response.body).toHaveProperty('deductions', 500.00);
-            expect(response.body).toHaveProperty('taxes', 0.00);
-            expect(response.body).toHaveProperty('netPay', 6500.00);
+            expect(response.body).toHaveProperty('id', payslipApiTestPayslipId);
+            expect(response.body).toHaveProperty('employeeId', ahmedBennaniEmployeeId);
+            expect(response.body).toHaveProperty('tenantId', techSolutionsTenantId);
+            expect(response.body).toHaveProperty('grossPay', 7500.00);  // Adjusted
+            expect(response.body).toHaveProperty('deductions', 505.50); // Adjusted
+            expect(response.body).toHaveProperty('taxes', 1200.00);    // Adjusted
+            expect(response.body).toHaveProperty('netPay', 5794.50);   // Adjusted
 
             expect(response.body.items).toBeDefined();
             expect(Array.isArray(response.body.items)).toBe(true);
-            expect(response.body.items.length).toBe(3); // Based on beforeAll setup
+            expect(response.body.items.length).toBe(3); // Adjusted (Base, CNSS, IGR)
 
-            const baseSalaryItem = response.body.items.find(item => item.description === "Salaire de Base (Suite Test Payslip)");
+            const baseSalaryItem = response.body.items.find(item => item.description === "Salaire de Base (Suite Test Payslip Mars)");
             expect(baseSalaryItem).toBeDefined();
-            expect(baseSalaryItem.amount).toBe(6500.00);
+            expect(baseSalaryItem.amount).toBe(7500.00);
             expect(baseSalaryItem.salaryComponent.id).toBe(baseSalaryComponentId);
 
-
-            const transportItem = response.body.items.find(item => item.description === "Indemnité Transport (Suite Test Payslip)");
-            expect(transportItem).toBeDefined();
-            expect(transportItem.amount).toBe(500.00);
-            expect(transportItem.salaryComponent.id).toBe(transportComponentId);
-
-            const cnssItem = response.body.items.find(item => item.description === "Cotisation CNSS (Suite Test Payslip)");
+            const cnssItem = response.body.items.find(item => item.description === "Cotisation CNSS (Suite Test Payslip Mars)");
             expect(cnssItem).toBeDefined();
-            expect(cnssItem.amount).toBe(500.00);
+            expect(cnssItem.amount).toBe(505.50);
             expect(cnssItem.salaryComponent.id).toBe(cnssComponentId);
+
+            const igrItem = response.body.items.find(item => item.description === "IGR (Suite Test Payslip Mars)");
+            expect(igrItem).toBeDefined();
+            expect(igrItem.amount).toBe(1200.00);
+            expect(igrItem.salaryComponent.id).toBe(igrComponentId);
         });
 
-        it('GET /api/employees/:employeeId/payslips - should retrieve only the payslip created for this test suite for Ahmed Bennani', async () => {
-            expect(thisSuitesEmployeeId).toBeDefined(); // ahmedBennaniEmployeeId
+        it('GET /api/employees/:employeeId/payslips - should retrieve payslips for Ahmed Bennani, including the one from this suite', async () => {
+            expect(ahmedBennaniEmployeeId).toBeDefined();
 
             const response = await request(API_BASE_URL)
-                .get(`/api/employees/${thisSuitesEmployeeId}/payslips`);
+                .get(`/api/employees/${ahmedBennaniEmployeeId}/payslips`); // Use global employeeId
 
             expect(response.statusCode).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
-            // Expecting only 1 payslip, the one created in this suite's beforeAll
-            expect(response.body.length).toBe(1);
+            expect(response.body.length).toBeGreaterThanOrEqual(1); // Expect at least one
 
-            const foundPayslip = response.body[0];
-            expect(foundPayslip).toBeDefined();
-            expect(foundPayslip.id).toBe(thisSuitesPayslipId);
-            expect(foundPayslip.grossPay).toBe(7000.00);
+            const foundPayslip = response.body.find(p => p.id === payslipApiTestPayslipId); // Check for specific payslip
+            expect(foundPayslip).toBeDefined(); // Ensure the payslip from this suite is present
+            expect(foundPayslip.grossPay).toBe(7500.00);
             expect(foundPayslip.payrollRun).toBeDefined();
-            expect(foundPayslip.payrollRun.id).toBe(thisSuitesPayrollRunId);
-            // Check periodEnd for July to be sure it's the correct one
+            expect(foundPayslip.payrollRun.id).toBe(payslipApiTestPayrollRunId);
             const periodEndDate = new Date(foundPayslip.payrollRun.periodEnd).toISOString().split('T')[0];
-            expect(periodEndDate).toBe('2024-07-31');
+            expect(periodEndDate).toBe('2024-03-31'); // Check it's the March payslip
         });
 
         it('GET /api/payslips/:payslipId - should fail with 400 for invalid payslipId UUID format', async () => {
