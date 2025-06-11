@@ -436,7 +436,7 @@ describe('Payroll SaaS API Integration Tests', () => {
             expect(response.body.grossPay).toBe(12500.00); // Sum of Jan (6200) and Feb (6300)
             expect(response.body.netPay).toBe(10010.00); // Sum of Jan (4970) and Feb (5040)
             expect(response.body.items['BASE_SALARY_MONTHLY'].amount).toBe(12000.00); // 6000 (Jan) + 6000 (Feb)
-            expect(response.body.items['TRANSPORT_ALLOWANCE_MONTHLY'].amount).toBe(500.00); // 200 (Jan) + 300 (Feb)
+            expect(response.body.items['TRANSPORT_ALLOWANCE'].amount).toBe(500.00); // 200 (Jan) + 300 (Feb) - Key corrected
             expect(response.body.items['CNSS_EMPLOYEE'].amount).toBe(842.50); // 417.88 (Jan) + 424.62 (Feb)
         });
 
