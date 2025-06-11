@@ -1,6 +1,7 @@
 // frontend/src/features/salaryComponents/components/SalaryComponentList.tsx
 import React, { FC } from 'react';
 import { SalaryComponent } from '../../../types'; // Ensure this path is correct
+import formatFinancialValue from '../../../../utils/formatAmount';
 
 import {
   Table,
@@ -33,25 +34,6 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
     // The parent page (SalaryComponentsPage) might have a more elaborate empty state.
     return null;
   }
-
-  const formatAmount = (component: SalaryComponent): string => {
-    if (component.calculation_type === 'fixed') {
-      return component.amount != null ? component.amount.toFixed(2) : 'N/A';
-    }
-    if (component.calculation_type === 'percentage') {
-      if (component.percentage != null) {
-        const numPercentage = parseFloat(String(component.percentage));
-        if (!isNaN(numPercentage)) {
-          return `${numPercentage.toFixed(2)}%`;
-        }
-      }
-      return 'N/A';
-    }
-    if (component.calculation_type === 'formula') {
-      return 'Formula'; // Or some other placeholder
-    }
-    return 'N/A';
-  };
 
   return (
     <TableContainer bg="white" boxShadow="sm" borderRadius="lg" p={4}>
@@ -89,7 +71,15 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
               <Td textTransform="capitalize">
                 {component.calculation_type.replace('_', ' ')}
               </Td>
-              <Td fontWeight="medium">{formatAmount(component)}</Td>
+              <Td fontWeight="medium">
+                {component.calculation_type === 'formula'
+                  ? 'Formula'
+                  : formatFinancialValue(
+                      component.calculation_type === 'fixed' ? component.amount : component.percentage,
+                      component.calculation_type, // This will be 'fixed' or 'percentage' here
+                      // currency can be omitted to use default 'USD'
+                    )}
+              </Td>
               <Td>{component.is_taxable ? 'Yes' : 'No'}</Td>
               <Td>
                 {!component.is_system_defined ? (
