@@ -69,10 +69,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(12, 2), // Precision 12, 2 decimal places
       allowNull: true, // Might be null if 'percentage' or complex 'formula'
     },
-    // percentage: { // Percentage value if 'percentage' type
-    //   type: DataTypes.DECIMAL(5, 2), // e.g., 50.00 for 50%
-    //   allowNull: true, // Null if not 'percentage' type
-    // },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true, // Or false, depending on requirements
+    },
+    percentage: { // Percentage value if 'percentage' type
+      type: DataTypes.DECIMAL(5, 2), // e.g., 50.00 for 50%
+      allowNull: true, // Null if not 'percentage' type
+    },
     // basedOnComponentId: { // Self-referential FK for percentage calculations
     //   type: DataTypes.UUID,
     //   allowNull: true,
