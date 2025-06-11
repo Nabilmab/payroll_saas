@@ -284,6 +284,153 @@ app.delete('/api/salary-components/:componentId', authenticateAndAttachUser, /* 
     }
 });
 
+// --- EMPLOYEE DEPENDENTS ROUTES ---
+
+// CREATE a new dependent for an employee
+app.post('/api/employees/:employeeId/dependents', authenticateAndAttachUser, async (req, res) => {
+    try {
+        const { tenantId } = req.user;
+        const { employeeId } = req.params;
+        const { full_name, relationship, date_of_birth, is_fiscally_dependent, effective_start_date, notes } = req.body;
+
+        // Basic validation
+        if (!full_name || !relationship) {
+            return res.status(400).json({ error: 'Full name and relationship are required.' });
+        }
+
+        // Check if employee exists and belongs to the tenant
+        const employee = await Employee.findOne({ where: { id: employeeId, tenantId } });
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found or access denied.' });
+        }
+
+        const newDependent = await EmployeeDependent.create({
+            tenantId,
+            employeeId,
+            full_name,
+            relationship,
+            date_of_birth: date_of_birth || null,
+            is_fiscally_dependent: typeof is_fiscally_dependent === 'boolean' ? is_fiscally_dependent : true,
+            effective_start_date: effective_start_date || new Date(),
+            notes
+        });
+
+        res.status(201).json(newDependent);
+    } catch (error) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).json({ error: 'This dependent profile (name and DOB) might already exist for this employee.' });
+        }
+        console.error('Error creating employee dependent:', error);
+        res.status(500).json({ error: 'Failed to create employee dependent.' });
+    }
+});
+
+// GET all dependents for an employee
+app.get('/api/employees/:employeeId/dependents', authenticateAndAttachUser, async (req, res) => {
+    try {
+        const { tenantId } = req.user;
+        const { employeeId } = req.params;
+
+        // Check if employee exists and belongs to the tenant
+        const employee = await Employee.findOne({ where: { id: employeeId, tenantId } });
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found or access denied.' });
+        }
+
+        const dependents = await EmployeeDependent.findAll({
+            where: { employeeId, tenantId, effective_end_date: null }, // Only currently active dependents
+            order: [['full_name', 'ASC']]
+        });
+        res.json(dependents);
+    } catch (error) {
+        console.error('Error fetching employee dependents:', error);
+        res.status(500).json({ error: 'Failed to fetch employee dependents.' });
+    }
+});
+
+// GET a specific dependent by ID
+app.get('/api/dependents/:dependentId', authenticateAndAttachUser, async (req, res) => {
+    try {
+        const { tenantId } = req.user;
+        const { dependentId } = req.params;
+
+        const dependent = await EmployeeDependent.findOne({
+            where: { id: dependentId, tenantId },
+            include: [{ model: Employee, as: 'employee', attributes: ['id', 'first_name', 'last_name'] }] // Example include
+        });
+
+        if (!dependent) {
+            return res.status(404).json({ error: 'Dependent not found or access denied.' });
+        }
+        res.json(dependent);
+    } catch (error) {
+        console.error('Error fetching dependent:', error);
+        res.status(500).json({ error: 'Failed to fetch dependent.' });
+    }
+});
+
+// UPDATE an employee's dependent
+app.put('/api/dependents/:dependentId', authenticateAndAttachUser, async (req, res) => {
+    try {
+        const { tenantId } = req.user;
+        const { dependentId } = req.params;
+        const { full_name, relationship, date_of_birth, is_fiscally_dependent, effective_start_date, effective_end_date, notes } = req.body;
+
+        const dependent = await EmployeeDependent.findOne({ where: { id: dependentId, tenantId } });
+        if (!dependent) {
+            return res.status(404).json({ error: 'Dependent not found or access denied.' });
+        }
+
+        // For updates affecting history (e.g., changing is_fiscally_dependent or "ending" a dependent)
+        // you might implement a more sophisticated logic:
+        // 1. Set `effective_end_date` on the current record.
+        // 2. Create a new record with the changes and a new `effective_start_date`.
+        // For simplicity here, we'll do a direct update.
+
+        if (full_name !== undefined) dependent.full_name = full_name;
+        if (relationship !== undefined) dependent.relationship = relationship;
+        if (date_of_birth !== undefined) dependent.date_of_birth = date_of_birth; // Can be null
+        if (is_fiscally_dependent !== undefined) dependent.is_fiscally_dependent = is_fiscally_dependent;
+        if (effective_start_date !== undefined) dependent.effective_start_date = effective_start_date;
+        if (effective_end_date !== undefined) dependent.effective_end_date = effective_end_date; // Can be null
+        if (notes !== undefined) dependent.notes = notes;
+
+
+        await dependent.save();
+        res.json(dependent);
+    } catch (error) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+             return res.status(409).json({ error: 'This dependent profile (name and DOB) might already exist for this employee.' });
+        }
+        console.error('Error updating employee dependent:', error);
+        res.status(500).json({ error: 'Failed to update employee dependent.' });
+    }
+});
+
+// DELETE (soft delete) an employee's dependent
+app.delete('/api/dependents/:dependentId', authenticateAndAttachUser, async (req, res) => {
+    try {
+        const { tenantId } = req.user;
+        const { dependentId } = req.params;
+
+        const dependent = await EmployeeDependent.findOne({ where: { id: dependentId, tenantId } });
+        if (!dependent) {
+            return res.status(404).json({ error: 'Dependent not found or access denied.' });
+        }
+
+        // If using paranoid: true, destroy() will soft delete.
+        // If you want to explicitly set effective_end_date:
+        // dependent.effective_end_date = new Date();
+        // await dependent.save();
+        await dependent.destroy();
+
+        res.status(204).send();
+    } catch (error) {
+        console.error('Error deleting employee dependent:', error);
+        res.status(500).json({ error: 'Failed to delete employee dependent.' });
+    }
+});
+
 // --- Start the Server ---
 const startServer = async () => {
   try {
