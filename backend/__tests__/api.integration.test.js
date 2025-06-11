@@ -199,8 +199,8 @@ describe('Payroll SaaS API Integration Tests', () => {
 
     // --- YTD Summary API Tests ---
     describe('YTD Summary API', () => {
-        let testPayrollRunId;
-        let testPayslipId;
+        let janPayrollRunId, febPayrollRunId;
+        let janPayslipId, febPayslipId; // janPayslipId will be assigned to testPayslipId for other tests
 
         beforeAll(async () => {
             // Ensure tenantId and employeeId are available
@@ -219,19 +219,16 @@ describe('Payroll SaaS API Integration Tests', () => {
 
             // Create a PayrollRun for Jan 2024
             const janRunDate = new Date('2024-01-31T00:00:00.000Z');
-            const [janPayrollRun] = await PayrollRun.findOrCreate({
-                where: {
-                    tenantId: techSolutionsTenantId,
-                    payScheduleId: techSolutionsPayrollSchedule.id,
-                    periodEnd: janRunDate
-                },
-                defaults: {
-                    periodStart: new Date('2024-01-01T00:00:00.000Z'),
-                    paymentDate: new Date('2024-02-05T00:00:00.000Z'),
-                    status: 'completed'
-                }
+            const janPayrollRun = await PayrollRun.create({
+                tenantId: techSolutionsTenantId,
+                payScheduleId: techSolutionsPayrollSchedule.id,
+                periodStart: new Date('2024-01-01T00:00:00.000Z'),
+                periodEnd: janRunDate,
+                paymentDate: new Date('2024-02-05T00:00:00.000Z'),
+                status: 'completed'
             });
-            testPayrollRunId = janPayrollRun.id; // Store for potential cleanup or direct use if needed
+            janPayrollRunId = janPayrollRun.id;
+            testPayrollRunId = janPayrollRunId; // Keep testPayrollRunId for compatibility if other parts of code use it by that name
 
             // Create a Payslip for Ahmed Bennani for Jan 2024
             const [janPayslip] = await Payslip.findOrCreate({
@@ -247,7 +244,8 @@ describe('Payroll SaaS API Integration Tests', () => {
                     netPay: 4970.00
                 }
             });
-            testPayslipId = janPayslip.id; // This is the one used by Payslip API tests too
+            janPayslipId = janPayslip.id;
+            testPayslipId = janPayslipId; // This is the one used by Payslip API tests too
 
             const baseSalaryComp = await SalaryComponent.findOne({ where: { component_code: 'BASE_SALARY_MONTHLY', tenantId: techSolutionsTenantId }});
             const cnssComp = await SalaryComponent.findOne({ where: { component_code: 'CNSS_EMPLOYEE', tenantId: techSolutionsTenantId }});
@@ -274,24 +272,21 @@ describe('Payroll SaaS API Integration Tests', () => {
 
             // Create a PayrollRun for Feb 2024
             const febRunDate = new Date('2024-02-29T00:00:00.000Z');
-            const [febPayrollRun] = await PayrollRun.findOrCreate({
-                where: {
-                    tenantId: techSolutionsTenantId,
-                    payScheduleId: techSolutionsPayrollSchedule.id,
-                    periodEnd: febRunDate
-                },
-                defaults: {
-                    periodStart: new Date('2024-02-01T00:00:00.000Z'),
-                    paymentDate: new Date('2024-03-05T00:00:00.000Z'),
-                    status: 'completed'
-                }
+            const febPayrollRun = await PayrollRun.create({
+                tenantId: techSolutionsTenantId,
+                payScheduleId: techSolutionsPayrollSchedule.id,
+                periodStart: new Date('2024-02-01T00:00:00.000Z'),
+                periodEnd: febRunDate,
+                paymentDate: new Date('2024-03-05T00:00:00.000Z'),
+                status: 'completed'
             });
+            febPayrollRunId = febPayrollRun.id;
 
             // Create a Payslip for Ahmed Bennani for Feb 2024 (different amounts)
             const [febPayslip] = await Payslip.findOrCreate({
                 where: {
                     employeeId: ahmedBennaniEmployeeId,
-                    payrollRunId: febPayrollRun.id
+                    payrollRunId: febPayrollRunId // Use febPayrollRunId here
                 },
                 defaults: {
                     tenantId: techSolutionsTenantId,
@@ -301,17 +296,19 @@ describe('Payroll SaaS API Integration Tests', () => {
                     netPay: 5040.00
                 }
             });
+            febPayslipId = febPayslip.id;
+
              // PayslipItems for Feb Payslip
             await PayslipItem.findOrCreate({
-                where: { payslipId: febPayslip.id, salaryComponentId: baseSalaryComp.id },
+                where: { payslipId: febPayslipId, salaryComponentId: baseSalaryComp.id },
                 defaults: { tenantId: techSolutionsTenantId, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 }
             });
             await PayslipItem.findOrCreate({
-                where: { payslipId: febPayslip.id, salaryComponentId: transportAllowanceComp.id },
+                where: { payslipId: febPayslipId, salaryComponentId: transportAllowanceComp.id },
                 defaults: { tenantId: techSolutionsTenantId, description: transportAllowanceComp.name, type: 'earning', amount: 300.00 } // Increased transport
             });
             await PayslipItem.findOrCreate({
-                where: { payslipId: febPayslip.id, salaryComponentId: cnssComp.id },
+                where: { payslipId: febPayslipId, salaryComponentId: cnssComp.id },
                 defaults: { tenantId: techSolutionsTenantId, description: cnssComp.name, type: 'deduction', amount: 424.62 } // (6000+300)*0.0674
             });
 
@@ -319,17 +316,44 @@ describe('Payroll SaaS API Integration Tests', () => {
             // This employee (fatimaZahraEmployeeId) should already be created in the global beforeAll
             // No specific payslips are created for her here, so YTD should be zero unless other tests create them.
 
-            console.log(`YTD beforeAll: Created Jan Payslip (${janPayslip.id}) and Feb Payslip (${febPayslip.id}) for employee ${ahmedBennaniEmployeeId}`);
+            console.log(`YTD beforeAll: Created Jan Payslip (${janPayslipId}) and Feb Payslip (${febPayslipId}) for employee ${ahmedBennaniEmployeeId}`);
         });
 
-        afterAll(async () => { // Clean up YTD specific test data
-            if (testPayslipId) {
-                await PayslipItem.destroy({ where: { payslipId: testPayslipId }, force: true });
-                await Payslip.destroy({ where: { id: testPayslipId }, force: true });
+        afterAll(async () => {
+            console.log(`YTD afterAll: Cleaning up test data. Jan Payslip ID: ${janPayslipId}, Feb Payslip ID: ${febPayslipId}`);
+            console.log(`YTD afterAll: Cleaning up test data. Jan PayrollRun ID: ${janPayrollRunId}, Feb PayrollRun ID: ${febPayrollRunId}`);
+
+            // Delete PayslipItems first
+            if (janPayslipId) {
+                await PayslipItem.destroy({ where: { payslipId: janPayslipId }, force: true });
             }
-            if (testPayrollRunId) {
-                await PayrollRun.destroy({ where: { id: testPayrollRunId }, force: true });
+            if (febPayslipId) {
+                await PayslipItem.destroy({ where: { payslipId: febPayslipId }, force: true });
             }
+
+            // Then delete Payslips
+            if (janPayslipId) {
+                await Payslip.destroy({ where: { id: janPayslipId }, force: true });
+            }
+            if (febPayslipId) {
+                await Payslip.destroy({ where: { id: febPayslipId }, force: true });
+            }
+
+            // Finally, delete PayrollRuns
+            // Note: testPayrollRunId is janPayrollRunId
+            if (janPayrollRunId) {
+                await PayrollRun.destroy({ where: { id: janPayrollRunId }, force: true });
+            }
+            if (febPayrollRunId && febPayrollRunId !== janPayrollRunId) { // Ensure not trying to delete same run twice
+                await PayrollRun.destroy({ where: { id: febPayrollRunId }, force: true });
+            }
+            // Reset global vars to avoid interference if tests were to run in a leaky way (though Jest isolates)
+            janPayslipId = null;
+            febPayslipId = null;
+            janPayrollRunId = null;
+            febPayrollRunId = null;
+            testPayslipId = null; // This was aliasing janPayslipId
+            testPayrollRunId = null; // This was aliasing janPayrollRunId
         });
 
         it('GET /api/employees/:employeeId/ytd-summary - should return YTD summary for Ahmed Bennani', async () => {
