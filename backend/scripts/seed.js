@@ -440,6 +440,35 @@ async function seedPaySchedules() {
 
 // --- Main Seeding Orchestration ---
 
+async function dropOldConstraint() {
+  console.log('Attempting to drop old unique constraint salary_components_component_code_key...');
+  try {
+    await sequelize.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM pg_indexes
+          WHERE tablename = 'salary_components'
+          AND indexname = 'salary_components_component_code_key'
+        ) THEN
+          ALTER TABLE "salary_components" DROP CONSTRAINT IF EXISTS "salary_components_component_code_key";
+          RAISE NOTICE 'Dropped old unique constraint salary_components_component_code_key from salary_components table.';
+        ELSE
+          RAISE NOTICE 'Old unique constraint salary_components_component_code_key does not exist on salary_components table.';
+        END IF;
+      END
+      $$;
+    `);
+    console.log('Successfully executed dropOldConstraint query.');
+  } catch (error) {
+    console.error('Error executing dropOldConstraint query:', error);
+    // It's possible the constraint doesn't exist or other issues.
+    // Depending on the error, we might want to proceed or halt.
+    // For now, logging the error and proceeding.
+  }
+}
+
 async function seedDatabase() {
   try {
     console.log('Starting database seeding...');
@@ -466,6 +495,7 @@ async function seedDatabase() {
 if (require.main === module) {
   (async () => {
     try {
+      await dropOldConstraint(); // Call before sync
       await sequelize.sync({ alter: true });
       console.log('Database schema synchronized.');
       await seedDatabase();
