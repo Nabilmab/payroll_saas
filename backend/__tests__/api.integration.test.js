@@ -203,43 +203,123 @@ describe('Payroll SaaS API Integration Tests', () => {
         let testPayslipId;
 
         beforeAll(async () => {
-            // Setup minimal data for YTD tests
+            // Ensure tenantId and employeeId are available
+            if (!techSolutionsTenantId || !ahmedBennaniEmployeeId) {
+                throw new Error("Tenant ID or Employee ID is not set. Ensure global beforeAll ran correctly.");
+            }
+
+            // Simplified Setup for YTD tests - focusing on what's needed for YTD logic
             const techSolutionsPayrollSchedule = await PaySchedule.findOne({
                 where: { name: "Paiement Mensuel Standard", tenantId: techSolutionsTenantId }
             });
-            if (!techSolutionsPayrollSchedule) throw new Error("Paiement Mensuel Standard schedule not found for YTD test.");
+            if (!techSolutionsPayrollSchedule) {
+                console.error("Paiement Mensuel Standard schedule not found for YTD test. TenantId:", techSolutionsTenantId);
+                throw new Error("Paiement Mensuel Standard schedule not found for YTD test.");
+            }
 
-            const testRunDate = new Date('2024-01-31'); // Use a consistent date for predictability
-            console.log('YTD beforeAll - techSolutionsTenantId:', techSolutionsTenantId);
-            console.log('YTD beforeAll - techSolutionsPayrollSchedule.id:', techSolutionsPayrollSchedule ? techSolutionsPayrollSchedule.id : 'PaySchedule NOT FOUND');
-            console.log('YTD beforeAll - testRunDate:', testRunDate);
-            const [payrollRunInstance] = await PayrollRun.findOrCreate({
-                where: { tenantId: techSolutionsTenantId, payScheduleId: techSolutionsPayrollSchedule.id, periodEnd: testRunDate },
-                defaults: { periodStart: new Date('2024-01-01'), paymentDate: new Date('2024-02-05'), status: 'completed' }
+            // Create a PayrollRun for Jan 2024
+            const janRunDate = new Date('2024-01-31T00:00:00.000Z');
+            const [janPayrollRun] = await PayrollRun.findOrCreate({
+                where: {
+                    tenantId: techSolutionsTenantId,
+                    payScheduleId: techSolutionsPayrollSchedule.id,
+                    periodEnd: janRunDate
+                },
+                defaults: {
+                    periodStart: new Date('2024-01-01T00:00:00.000Z'),
+                    paymentDate: new Date('2024-02-05T00:00:00.000Z'),
+                    status: 'completed'
+                }
             });
-            testPayrollRunId = payrollRunInstance.id;
+            testPayrollRunId = janPayrollRun.id; // Store for potential cleanup or direct use if needed
 
-            const [payslipInstance] = await Payslip.findOrCreate({
-                where: { employeeId: ahmedBennaniEmployeeId, payrollRunId: testPayrollRunId },
-                defaults: { tenantId: techSolutionsTenantId, grossPay: 6000.00, deductions: 250.00, taxes: 950.00, netPay: 4800.00 }
+            // Create a Payslip for Ahmed Bennani for Jan 2024
+            const [janPayslip] = await Payslip.findOrCreate({
+                where: {
+                    employeeId: ahmedBennaniEmployeeId,
+                    payrollRunId: janPayrollRun.id
+                },
+                defaults: {
+                    tenantId: techSolutionsTenantId,
+                    grossPay: 6200.00, // Slightly different gross for Jan
+                    deductions: 250.00,
+                    taxes: 980.00,
+                    netPay: 4970.00
+                }
             });
-            testPayslipId = payslipInstance.id;
+            testPayslipId = janPayslip.id; // This is the one used by Payslip API tests too
 
             const baseSalaryComp = await SalaryComponent.findOne({ where: { component_code: 'BASE_SALARY_MONTHLY', tenantId: techSolutionsTenantId }});
             const cnssComp = await SalaryComponent.findOne({ where: { component_code: 'CNSS_EMPLOYEE', tenantId: techSolutionsTenantId }});
+            const transportAllowanceComp = await SalaryComponent.findOne({ where: { component_code: 'TRANSPORT_ALLOWANCE_MONTHLY', tenantId: techSolutionsTenantId }});
 
-            if (baseSalaryComp) {
-                await PayslipItem.findOrCreate({
-                    where: { payslipId: testPayslipId, salaryComponentId: baseSalaryComp.id },
-                    defaults: { tenantId: techSolutionsTenantId, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 }
-                });
+            if (!baseSalaryComp || !cnssComp || !transportAllowanceComp) {
+                throw new Error("One or more required salary components for YTD/Payslip tests are missing from the database.");
             }
-            if (cnssComp) {
-                await PayslipItem.findOrCreate({
-                    where: { payslipId: testPayslipId, salaryComponentId: cnssComp.id },
-                    defaults: { tenantId: techSolutionsTenantId, description: cnssComp.name, type: 'deduction', amount: 404.40 } // 6000 * 0.0674
-                });
-            }
+
+            // PayslipItems for Jan Payslip
+            await PayslipItem.findOrCreate({
+                where: { payslipId: janPayslip.id, salaryComponentId: baseSalaryComp.id },
+                defaults: { tenantId: techSolutionsTenantId, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 }
+            });
+            await PayslipItem.findOrCreate({
+                where: { payslipId: janPayslip.id, salaryComponentId: transportAllowanceComp.id },
+                defaults: { tenantId: techSolutionsTenantId, description: transportAllowanceComp.name, type: 'earning', amount: 200.00 }
+            });
+            await PayslipItem.findOrCreate({
+                where: { payslipId: janPayslip.id, salaryComponentId: cnssComp.id },
+                defaults: { tenantId: techSolutionsTenantId, description: cnssComp.name, type: 'deduction', amount: 417.88 } // (6000+200)*0.0674
+            });
+
+
+            // Create a PayrollRun for Feb 2024
+            const febRunDate = new Date('2024-02-29T00:00:00.000Z');
+            const [febPayrollRun] = await PayrollRun.findOrCreate({
+                where: {
+                    tenantId: techSolutionsTenantId,
+                    payScheduleId: techSolutionsPayrollSchedule.id,
+                    periodEnd: febRunDate
+                },
+                defaults: {
+                    periodStart: new Date('2024-02-01T00:00:00.000Z'),
+                    paymentDate: new Date('2024-03-05T00:00:00.000Z'),
+                    status: 'completed'
+                }
+            });
+
+            // Create a Payslip for Ahmed Bennani for Feb 2024 (different amounts)
+            const [febPayslip] = await Payslip.findOrCreate({
+                where: {
+                    employeeId: ahmedBennaniEmployeeId,
+                    payrollRunId: febPayrollRun.id
+                },
+                defaults: {
+                    tenantId: techSolutionsTenantId,
+                    grossPay: 6300.00,
+                    deductions: 260.00,
+                    taxes: 1000.00,
+                    netPay: 5040.00
+                }
+            });
+             // PayslipItems for Feb Payslip
+            await PayslipItem.findOrCreate({
+                where: { payslipId: febPayslip.id, salaryComponentId: baseSalaryComp.id },
+                defaults: { tenantId: techSolutionsTenantId, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 }
+            });
+            await PayslipItem.findOrCreate({
+                where: { payslipId: febPayslip.id, salaryComponentId: transportAllowanceComp.id },
+                defaults: { tenantId: techSolutionsTenantId, description: transportAllowanceComp.name, type: 'earning', amount: 300.00 } // Increased transport
+            });
+            await PayslipItem.findOrCreate({
+                where: { payslipId: febPayslip.id, salaryComponentId: cnssComp.id },
+                defaults: { tenantId: techSolutionsTenantId, description: cnssComp.name, type: 'deduction', amount: 424.62 } // (6000+300)*0.0674
+            });
+
+            // Minimal setup for Fatima Zahra (manager) - assumed to have no payslips for some tests
+            // This employee (fatimaZahraEmployeeId) should already be created in the global beforeAll
+            // No specific payslips are created for her here, so YTD should be zero unless other tests create them.
+
+            console.log(`YTD beforeAll: Created Jan Payslip (${janPayslip.id}) and Feb Payslip (${febPayslip.id}) for employee ${ahmedBennaniEmployeeId}`);
         });
 
         afterAll(async () => { // Clean up YTD specific test data
@@ -257,10 +337,11 @@ describe('Payroll SaaS API Integration Tests', () => {
                 .get(`/api/employees/${ahmedBennaniEmployeeId}/ytd-summary?periodEndDate=2024-03-31`); // Period includes Jan payslip
 
             expect(response.statusCode).toBe(200);
-            expect(response.body.grossPay).toBe(6000.00);
-            expect(response.body.netPay).toBe(4800.00);
-            expect(response.body.items['BASE_SALARY_MONTHLY'].amount).toBe(6000.00);
-            expect(response.body.items['CNSS_EMPLOYEE'].amount).toBe(404.40);
+            expect(response.body.grossPay).toBe(12500.00); // Sum of Jan (6200) and Feb (6300)
+            expect(response.body.netPay).toBe(10010.00); // Sum of Jan (4970) and Feb (5040)
+            expect(response.body.items['BASE_SALARY_MONTHLY'].amount).toBe(12000.00); // 6000 (Jan) + 6000 (Feb)
+            expect(response.body.items['TRANSPORT_ALLOWANCE_MONTHLY'].amount).toBe(500.00); // 200 (Jan) + 300 (Feb)
+            expect(response.body.items['CNSS_EMPLOYEE'].amount).toBe(842.50); // 417.88 (Jan) + 424.62 (Feb)
         });
 
         // ... (Include all other YTD tests from the previous script:
@@ -284,5 +365,91 @@ describe('Payroll SaaS API Integration Tests', () => {
             expect(response.statusCode).toBe(400);
         });
         // ... more YTD tests
+    });
+
+    // --- Payslip API Tests ---
+    describe('Payslip API', () => {
+        it('GET /api/payslips/:payslipId - should retrieve a specific payslip for Ahmed Bennani', async () => {
+            // testPayslipId is created in the YTD Summary's beforeAll
+            expect(testPayslipId).toBeDefined();
+
+            const response = await request(API_BASE_URL)
+                .get(`/api/payslips/${testPayslipId}`);
+
+            expect(response.statusCode).toBe(200);
+            expect(response.body).toHaveProperty('id', testPayslipId);
+            expect(response.body).toHaveProperty('employeeId', ahmedBennaniEmployeeId);
+            expect(response.body).toHaveProperty('tenantId', techSolutionsTenantId);
+            expect(response.body).toHaveProperty('grossPay', 6200.00); // Jan payslip's grossPay
+            expect(response.body.items).toBeDefined();
+            // Expect 3 items for Jan payslip: Base Salary, Transport Allowance, CNSS
+            expect(response.body.items.length).toBe(3);
+
+
+            const baseSalaryItem = response.body.items.find(item => item.description === 'Salaire de Base Mensuel');
+            expect(baseSalaryItem).toBeDefined();
+            expect(baseSalaryItem.amount).toBe(6000.00);
+
+            const transportItem = response.body.items.find(item => item.description === 'Indemnité de Transport Mensuelle');
+            expect(transportItem).toBeDefined();
+            expect(transportItem.amount).toBe(200.00);
+
+            const cnssItem = response.body.items.find(item => item.description === 'CNSS (Employé)');
+            expect(cnssItem).toBeDefined();
+            expect(cnssItem.amount).toBe(417.88); // (6000+200)*0.0674 for Jan payslip
+        });
+
+        it('GET /api/employees/:employeeId/payslips - should retrieve all payslips for Ahmed Bennani', async () => {
+            // ahmedBennaniEmployeeId is from global beforeAll
+            expect(ahmedBennaniEmployeeId).toBeDefined();
+
+            const response = await request(API_BASE_URL)
+                .get(`/api/employees/${ahmedBennaniEmployeeId}/payslips`);
+
+            expect(response.statusCode).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            // Should now have 2 payslips (Jan and Feb) for Ahmed Bennani
+            expect(response.body.length).toBe(2);
+
+            // testPayslipId is Jan payslip
+            const foundJanPayslip = response.body.find(p => p.id === testPayslipId);
+            expect(foundJanPayslip).toBeDefined();
+            expect(foundJanPayslip.grossPay).toBe(6200.00); // Jan payslip's grossPay
+
+            // Check for Feb payslip details (optional, but good for completeness)
+            const febPayslip = response.body.find(p => p.grossPay === 6300.00); // Feb grossPay
+            expect(febPayslip).toBeDefined();
+        });
+
+        it('GET /api/payslips/:payslipId - should fail with 400 for invalid payslipId UUID format', async () => {
+            const response = await request(API_BASE_URL)
+                .get('/api/payslips/invalid-uuid');
+            expect(response.statusCode).toBe(400);
+            expect(response.body.error).toContain("Invalid payslip ID format");
+        });
+
+        it('GET /api/payslips/:payslipId - should fail with 404 if payslipId does not exist', async () => {
+            const nonExistentUUID = '123e4567-e89b-12d3-a456-426614174000'; // Valid UUID, but non-existent
+            const response = await request(API_BASE_URL)
+                .get(`/api/payslips/${nonExistentUUID}`);
+            expect(response.statusCode).toBe(404);
+            expect(response.body.error).toContain("Payslip not found");
+        });
+
+        it('GET /api/employees/:employeeId/payslips - should fail with 400 for invalid employeeId UUID format', async () => {
+            const response = await request(API_BASE_URL)
+                .get('/api/employees/invalid-uuid/payslips');
+            expect(response.statusCode).toBe(400);
+            expect(response.body.error).toContain("Invalid employee ID format");
+        });
+
+        it('GET /api/employees/:employeeId/payslips - should return an empty array for a non-existent employeeId', async () => {
+            const nonExistentUUID = '123e4567-e89b-12d3-a456-426614174001'; // Valid UUID, but non-existent
+            const response = await request(API_BASE_URL)
+                .get(`/api/employees/${nonExistentUUID}/payslips`);
+            expect(response.statusCode).toBe(200); // Or 404 depending on desired API behavior, 200 with empty is common
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBe(0);
+        });
     });
 });
