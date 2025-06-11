@@ -109,7 +109,6 @@ module.exports = (sequelize, DataTypes) => {
     component_code: { // For specific system components like 'SALBASE', 'IGR_PRELEV', 'CNSS_COT', 'AMO_COT'
       type: DataTypes.STRING,
       allowNull: true, // Can be null for tenant-defined components
-      unique: true, // Ensures system codes are unique if provided
     },
     is_cnss_subject: { // Does this component contribute to the CNSS taxable base?
       type: DataTypes.BOOLEAN,
@@ -136,6 +135,16 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['tenant_id'] },
       { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_salary_component_name' },
       // { fields: ['based_on_component_id'] },
+      {
+        unique: true,
+        fields: ['tenant_id', 'component_code'],
+        name: 'unique_tenant_component_code', // Simplified name as Op.ne is not used
+        // where: { // Omitting 'where' clause as Op is not readily available and it's simpler
+        //   component_code: { // This would require Op
+        //     [Op.ne]: null
+        //   }
+        // }
+      }
     ]
   });
 
