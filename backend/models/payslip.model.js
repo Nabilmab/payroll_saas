@@ -3,7 +3,13 @@ const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class Payslip extends Model {
-    // No associate method as per request
+    static associate(models) {
+      // define association here
+      Payslip.belongsTo(models.PayrollRun, { foreignKey: 'payrollRunId', as: 'payrollRun' });
+      Payslip.hasMany(models.PayslipItem, { foreignKey: 'payslipId', as: 'payslipItems' });
+      // Payslip.belongsTo(models.Tenant, { foreignKey: 'tenantId', as: 'tenant' }); // Example for future
+      // Payslip.belongsTo(models.Employee, { foreignKey: 'employeeId', as: 'employee' }); // Example for future
+    }
   }
 
   Payslip.init({
@@ -75,7 +81,7 @@ module.exports = (sequelize, DataTypes) => {
     indexes: [
       // { fields: ['tenant_id'] }, // Add back if associations are restored
       // { fields: ['employee_id'] }, // Add back if associations are restored
-      // { fields: ['payroll_run_id'] }, // Add back if associations are restored
+      { fields: ['payroll_run_id'] }, // Add back if associations are restored
       // A payslip should be unique per employee per payroll run
       {
         unique: true,

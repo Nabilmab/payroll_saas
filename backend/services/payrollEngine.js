@@ -284,7 +284,7 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
                 if (item.amount !== 0 || await componentAllowsZeroAmount(item.component?.id)) {
                     finalPayslipItemsData.push({
                         tenantId,
-                        componentId: item.component.id,
+                        salaryComponentId: item.component.id, // Corrected field name
                         description: item.component.name,
                         type: item.type,
                         amount: item.amount,
