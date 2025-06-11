@@ -255,43 +255,61 @@ describe('Payroll SaaS API Integration Tests', () => {
             testPayrollRunId = janPayrollRunId; // Keep testPayrollRunId for compatibility if other parts of code use it by that name
 
             // Create a Payslip for Ahmed Bennani for Jan 2024
-            const [janPayslip] = await Payslip.findOrCreate({
-                where: {
-                    employeeId: ahmedBennaniEmployeeId,
-                    payrollRunId: janPayrollRun.id
-                },
-                defaults: {
-                    tenantId: techSolutionsTenantId,
-                    grossPay: 6200.00, // Slightly different gross for Jan
-                    deductions: 250.00,
-                    taxes: 980.00,
-                    netPay: 4970.00
+            const janPayslipData = {
+                tenantId: techSolutionsTenantId,
+                employeeId: ahmedBennaniEmployeeId,
+                payrollRunId: janPayrollRunId, // Use the ID variable
+                grossPay: 6200.00,
+                deductions: 250.00,
+                taxes: 980.00,
+                netPay: 4970.00
+            };
+            console.log("YTD beforeAll - Data object for Jan Payslip.create:", JSON.stringify(janPayslipData, null, 2));
+            let janPayslip;
+            try {
+                janPayslip = await Payslip.create(janPayslipData);
+            } catch (error) {
+                console.error("YTD beforeAll - ERROR directly creating Jan Payslip:", error);
+                if (error.original) {
+                    console.error("YTD beforeAll - Original DB Error for Jan Payslip:", error.original);
                 }
-            });
+                throw error;
+            }
             janPayslipId = janPayslip.id;
             testPayslipId = janPayslipId; // This is the one used by Payslip API tests too
 
             const baseSalaryComp = await SalaryComponent.findOne({ where: { component_code: 'BASE_SALARY_MONTHLY', tenantId: techSolutionsTenantId }});
             const cnssComp = await SalaryComponent.findOne({ where: { component_code: 'CNSS_EMPLOYEE', tenantId: techSolutionsTenantId }});
-            const transportAllowanceComp = await SalaryComponent.findOne({ where: { component_code: 'TRANSPORT_ALLOWANCE_MONTHLY', tenantId: techSolutionsTenantId }});
+            // Corrected component_code for transportAllowanceComp
+            const transportAllowanceComp = await SalaryComponent.findOne({ where: { component_code: 'TRANSPORT_ALLOWANCE', tenantId: techSolutionsTenantId }});
 
+            // Logging after fetching salary components
+            console.log('YTD - baseSalaryComp found:', baseSalaryComp ? baseSalaryComp.id : 'NOT FOUND');
+            console.log('YTD - cnssComp found:', cnssComp ? cnssComp.id : 'NOT FOUND');
+            console.log('YTD - transportAllowanceComp found:', transportAllowanceComp ? transportAllowanceComp.id : 'NOT FOUND');
+
+            // Robust check for null components
             if (!baseSalaryComp || !cnssComp || !transportAllowanceComp) {
-                throw new Error("One or more required salary components for YTD/Payslip tests are missing from the database.");
+                let missing = [];
+                if (!baseSalaryComp) missing.push('BASE_SALARY_MONTHLY');
+                if (!cnssComp) missing.push('CNSS_EMPLOYEE');
+                if (!transportAllowanceComp) missing.push('TRANSPORT_ALLOWANCE'); // Corrected code
+                console.error(`YTD beforeAll - CRITICAL ERROR: One or more SalaryComponents not found for tenant ${techSolutionsTenantId}: ${missing.join(', ')}. Check seed data and component_codes.`);
+                throw new Error(`Critical SalaryComponent(s) not found: ${missing.join(', ')}`);
             }
 
             // PayslipItems for Jan Payslip
-            await PayslipItem.findOrCreate({
-                where: { payslipId: janPayslip.id, salaryComponentId: baseSalaryComp.id },
-                defaults: { tenantId: techSolutionsTenantId, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 }
-            });
-            await PayslipItem.findOrCreate({
-                where: { payslipId: janPayslip.id, salaryComponentId: transportAllowanceComp.id },
-                defaults: { tenantId: techSolutionsTenantId, description: transportAllowanceComp.name, type: 'earning', amount: 200.00 }
-            });
-            await PayslipItem.findOrCreate({
-                where: { payslipId: janPayslip.id, salaryComponentId: cnssComp.id },
-                defaults: { tenantId: techSolutionsTenantId, description: cnssComp.name, type: 'deduction', amount: 417.88 } // (6000+200)*0.0674
-            });
+            const janItem1Data = { tenantId: techSolutionsTenantId, payslipId: janPayslipId, salaryComponentId: baseSalaryComp.id, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 };
+            console.log("YTD beforeAll - Data for Jan PayslipItem 1 (Base Salary):", JSON.stringify(janItem1Data, null, 2));
+            try { await PayslipItem.create(janItem1Data); } catch (e) { console.error("Error creating Jan PI1:", e.original || e); throw e; }
+
+            const janItem2Data = { tenantId: techSolutionsTenantId, payslipId: janPayslipId, salaryComponentId: transportAllowanceComp.id, description: transportAllowanceComp.name, type: 'earning', amount: 200.00 };
+            console.log("YTD beforeAll - Data for Jan PayslipItem 2 (Transport):", JSON.stringify(janItem2Data, null, 2));
+            try { await PayslipItem.create(janItem2Data); } catch (e) { console.error("Error creating Jan PI2:", e.original || e); throw e; }
+
+            const janItem3Data = { tenantId: techSolutionsTenantId, payslipId: janPayslipId, salaryComponentId: cnssComp.id, description: cnssComp.name, type: 'deduction', amount: 417.88 };
+            console.log("YTD beforeAll - Data for Jan PayslipItem 3 (CNSS):", JSON.stringify(janItem3Data, null, 2));
+            try { await PayslipItem.create(janItem3Data); } catch (e) { console.error("Error creating Jan PI3:", e.original || e); throw e; }
 
 
             // Create a PayrollRun for Feb 2024
@@ -331,34 +349,40 @@ describe('Payroll SaaS API Integration Tests', () => {
             febPayrollRunId = febPayrollRun.id;
 
             // Create a Payslip for Ahmed Bennani for Feb 2024 (different amounts)
-            const [febPayslip] = await Payslip.findOrCreate({
-                where: {
-                    employeeId: ahmedBennaniEmployeeId,
-                    payrollRunId: febPayrollRunId // Use febPayrollRunId here
-                },
-                defaults: {
-                    tenantId: techSolutionsTenantId,
-                    grossPay: 6300.00,
-                    deductions: 260.00,
-                    taxes: 1000.00,
-                    netPay: 5040.00
+            const febPayslipData = {
+                tenantId: techSolutionsTenantId,
+                employeeId: ahmedBennaniEmployeeId,
+                payrollRunId: febPayrollRunId,
+                grossPay: 6300.00,
+                deductions: 260.00,
+                taxes: 1000.00,
+                netPay: 5040.00
+            };
+            console.log("YTD beforeAll - Data object for Feb Payslip.create:", JSON.stringify(febPayslipData, null, 2));
+            let febPayslip;
+            try {
+                febPayslip = await Payslip.create(febPayslipData);
+            } catch (error) {
+                console.error("YTD beforeAll - ERROR directly creating Feb Payslip:", error);
+                if (error.original) {
+                    console.error("YTD beforeAll - Original DB Error for Feb Payslip:", error.original);
                 }
-            });
+                throw error;
+            }
             febPayslipId = febPayslip.id;
 
              // PayslipItems for Feb Payslip
-            await PayslipItem.findOrCreate({
-                where: { payslipId: febPayslipId, salaryComponentId: baseSalaryComp.id },
-                defaults: { tenantId: techSolutionsTenantId, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 }
-            });
-            await PayslipItem.findOrCreate({
-                where: { payslipId: febPayslipId, salaryComponentId: transportAllowanceComp.id },
-                defaults: { tenantId: techSolutionsTenantId, description: transportAllowanceComp.name, type: 'earning', amount: 300.00 } // Increased transport
-            });
-            await PayslipItem.findOrCreate({
-                where: { payslipId: febPayslipId, salaryComponentId: cnssComp.id },
-                defaults: { tenantId: techSolutionsTenantId, description: cnssComp.name, type: 'deduction', amount: 424.62 } // (6000+300)*0.0674
-            });
+            const febItem1Data = { tenantId: techSolutionsTenantId, payslipId: febPayslipId, salaryComponentId: baseSalaryComp.id, description: baseSalaryComp.name, type: 'earning', amount: 6000.00 };
+            console.log("YTD beforeAll - Data for Feb PayslipItem 1 (Base Salary):", JSON.stringify(febItem1Data, null, 2));
+            try { await PayslipItem.create(febItem1Data); } catch (e) { console.error("Error creating Feb PI1:", e.original || e); throw e; }
+
+            const febItem2Data = { tenantId: techSolutionsTenantId, payslipId: febPayslipId, salaryComponentId: transportAllowanceComp.id, description: transportAllowanceComp.name, type: 'earning', amount: 300.00 };
+            console.log("YTD beforeAll - Data for Feb PayslipItem 2 (Transport):", JSON.stringify(febItem2Data, null, 2));
+            try { await PayslipItem.create(febItem2Data); } catch (e) { console.error("Error creating Feb PI2:", e.original || e); throw e; }
+
+            const febItem3Data = { tenantId: techSolutionsTenantId, payslipId: febPayslipId, salaryComponentId: cnssComp.id, description: cnssComp.name, type: 'deduction', amount: 424.62 };
+            console.log("YTD beforeAll - Data for Feb PayslipItem 3 (CNSS):", JSON.stringify(febItem3Data, null, 2));
+            try { await PayslipItem.create(febItem3Data); } catch (e) { console.error("Error creating Feb PI3:", e.original || e); throw e; }
 
             // Minimal setup for Fatima Zahra (manager) - assumed to have no payslips for some tests
             // This employee (fatimaZahraEmployeeId) should already be created in the global beforeAll
