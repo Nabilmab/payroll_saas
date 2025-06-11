@@ -1,13 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { sequelize } = require('./models'); // We only need sequelize to test connection here
-const { Op } = require('sequelize');
+const { Op } = require('sequelize'); // Op directly from sequelize package
 const validator = require('validator'); // Added validator import
 
 // CORRECTED: Import ALL models you'll need for your routes
 // User, Role, Department, EmployeeDependent were already there. Ensured others are present.
-const { User, Role, Employee, Department, SalaryComponent, Payslip, PayrollRun, PayslipItem, EmployeeDependent } = require('./models');
+// Added Tenant as per instruction, though not used in these specific new routes.
+// Added sequelize (instance) here, assuming it's exported from ./models/index.js
+const { User, Role, Employee, Department, SalaryComponent, Payslip, PayrollRun, PayslipItem, EmployeeDependent, Tenant, sequelize } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -583,28 +584,31 @@ app.get('/api/payslips/:payslipId', authenticateAndAttachUser, async (req, res) 
             include: [
                 {
                     model: Employee,
-                    as: 'employee', // Ensure this alias matches your Payslip model association
-                    attributes: ['id', 'first_name', 'last_name', 'email']
+                    as: 'employee',
+                    attributes: ['id', 'first_name', 'last_name', 'email', 'job_title'] // Add more as needed for payslip display
                 },
                 {
                     model: PayrollRun,
-                    as: 'payrollRun', // Ensure this alias matches your Payslip model association
+                    as: 'payrollRun',
                     attributes: ['id', 'periodStart', 'periodEnd', 'paymentDate']
                 },
                 {
                     model: PayslipItem,
-                    as: 'payslipItems', // Ensure this alias matches your Payslip model association
+                    as: 'payslipItems',
+                    attributes: ['id', 'description', 'type', 'amount'], // Fields from PayslipItem itself
                     include: [{
                         model: SalaryComponent,
-                        as: 'salaryComponent', // Ensure this alias matches your PayslipItem model association
-                        attributes: ['id', 'name', 'type', 'category', 'component_code']
+                        as: 'salaryComponent', // Alias from PayslipItem association
+                        attributes: ['id', 'name', 'type', 'category', 'component_code', 'payslip_display_order']
                     }],
-                    // Example ordering, adjust if SalaryComponent model doesn't have 'payslip_display_order'
-                    // or if 'createdAt' is not desired for PayslipItem ordering.
-                    // Consider if 'payslip_display_order' is on PayslipItem itself or SalaryComponent.
-                    // If on PayslipItem: order: [['payslip_display_order', 'ASC'], ['createdAt', 'ASC']]
-                    // If on SalaryComponent (as shown):
-                    order: [[{model: SalaryComponent, as: 'salaryComponent'}, 'payslip_display_order', 'ASC NULLS LAST'], ['createdAt', 'ASC']]
+                    // Order items within the payslip, e.g., by display order then by creation
+                    order: [
+                        // Order by payslip_display_order on the SalaryComponent, then by type (earnings before deductions)
+                        // Handling NULLS LAST for display order is important for custom items without an order
+                        [sequelize.literal('"payslipItems->salaryComponent"."payslip_display_order" ASC NULLS LAST')],
+                        ['type', 'ASC'], // 'earning' before 'deduction', 'tax', etc.
+                        ['createdAt', 'ASC']
+                    ]
                 }
             ]
         });
@@ -614,7 +618,7 @@ app.get('/api/payslips/:payslipId', authenticateAndAttachUser, async (req, res) 
         }
         res.json(payslip);
     } catch (error) {
-        console.error('Error fetching payslip:', error);
+        console.error(`Error fetching payslip ${req.params.payslipId}:`, error);
         res.status(500).json({ error: 'Failed to fetch payslip.' });
     }
 });
@@ -622,17 +626,19 @@ app.get('/api/payslips/:payslipId', authenticateAndAttachUser, async (req, res) 
 // GET all payslips for a specific employee
 app.get('/api/employees/:employeeId/payslips', authenticateAndAttachUser, async (req, res) => {
     try {
-        const { tenantId } = req.user; // Assuming authenticateAndAttachUser adds user to req
+        const { tenantId } = req.user;
         const { employeeId } = req.params;
 
         if (!validator.isUUID(employeeId)) {
             return res.status(400).json({ error: 'Invalid employee ID format. Please provide a valid UUID.' });
         }
 
+        // Verify employee exists and belongs to the tenant
         const employee = await Employee.findOne({ where: { id: employeeId, tenantId } });
         if (!employee) {
-            // Behavior from user feedback: return empty array if employee not found
-            return res.json([]);
+            // As per your test expectation for non-existent employee but valid UUID:
+            // return res.status(404).json({ error: 'Employee not found or access denied.' });
+            return res.json([]); // Return empty array if employee not found (test expects 200 with empty array)
         }
 
         const payslips = await Payslip.findAll({
@@ -640,16 +646,24 @@ app.get('/api/employees/:employeeId/payslips', authenticateAndAttachUser, async 
             include: [
                 {
                     model: PayrollRun,
-                    as: 'payrollRun',
-                    attributes: ['id', 'periodEnd', 'paymentDate']
+                    as: 'payrollRun', // From Payslip.belongsTo(PayrollRun, { as: 'payrollRun' })
+                    attributes: ['id', 'periodEnd', 'paymentDate', 'status'] // Added status for context
                 }
+                // For a list view, you might not need all PayslipItems immediately.
+                // If you do, add the PayslipItem include here as well.
             ],
-            // Order by periodEnd of the payrollRun in descending order
-            order: [[{ model: PayrollRun, as: 'payrollRun' }, 'periodEnd', 'DESC']]
+            order: [
+                // Order by payrollRun's periodEnd descending (most recent first)
+                // This requires the include to be set up correctly.
+                // The syntax for ordering by an included model's field can be tricky:
+                [ { model: PayrollRun, as: 'payrollRun' }, 'periodEnd', 'DESC' ],
+                ['createdAt', 'DESC'] // Fallback ordering
+            ]
         });
+
         res.json(payslips);
     } catch (error) {
-        console.error('Error fetching employee payslips:', error);
+        console.error(`Error fetching payslips for employee ${req.params.employeeId}:`, error);
         res.status(500).json({ error: 'Failed to fetch employee payslips.' });
     }
 });
