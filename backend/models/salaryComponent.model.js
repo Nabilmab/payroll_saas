@@ -110,6 +110,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true, // Can be null for tenant-defined components
     },
+    category: {
+      type: DataTypes.ENUM('employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction'),
+      allowNull: false,
+      defaultValue: 'employee_earning',
+    },
     is_cnss_subject: { // Does this component contribute to the CNSS taxable base?
       type: DataTypes.BOOLEAN,
       defaultValue: false,

@@ -119,7 +119,13 @@ app.post('/api/salary-components', authenticateAndAttachUser, /* authorizeAdmin,
     try {
         const { tenantId } = req.user;
         // Destructure calculation_type, amount, and percentage
-        const { name, description, type, calculation_type, amount, percentage, is_taxable, payslip_display_order } = req.body;
+        const { name, description, type, calculation_type, amount, percentage, is_taxable, payslip_display_order, category } = req.body;
+
+        const VALID_CATEGORIES = ['employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction'];
+
+        if (category && !VALID_CATEGORIES.includes(category)) {
+            return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+        }
 
         if (!name || !type) {
             return res.status(400).json({ error: 'Name and type are required.' });
@@ -145,7 +151,8 @@ app.post('/api/salary-components', authenticateAndAttachUser, /* authorizeAdmin,
             is_active: true,
             payslip_display_order: payslip_display_order ? parseInt(payslip_display_order, 10) : null,
             amount: null, // Initialize amount as null
-            percentage: null // Initialize percentage as null
+            percentage: null, // Initialize percentage as null
+            category: category // Add category, will use default from model if not provided
         };
 
         // Conditionally set amount or percentage
@@ -179,7 +186,13 @@ app.put('/api/salary-components/:componentId', authenticateAndAttachUser, /* aut
     try {
         const { tenantId } = req.user;
         const { componentId } = req.params;
-        const { name, description, type, calculation_type, amount, percentage, is_taxable, is_active, payslip_display_order } = req.body;
+        const { name, description, type, calculation_type, amount, percentage, is_taxable, is_active, payslip_display_order, category } = req.body;
+
+        const VALID_CATEGORIES = ['employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction'];
+
+        if (category && !VALID_CATEGORIES.includes(category)) {
+            return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+        }
 
         const component = await SalaryComponent.findOne({
             where: { id: componentId, tenantId: tenantId, is_system_defined: false }
@@ -249,6 +262,7 @@ app.put('/api/salary-components/:componentId', authenticateAndAttachUser, /* aut
         if (is_taxable !== undefined) component.is_taxable = !!is_taxable;
         if (is_active !== undefined) component.is_active = !!is_active;
         if (payslip_display_order !== undefined) component.payslip_display_order = payslip_display_order ? parseInt(payslip_display_order, 10) : null;
+        if (category !== undefined) component.category = category;
 
         await component.save();
         res.json(component);
