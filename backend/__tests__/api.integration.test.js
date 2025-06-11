@@ -495,8 +495,15 @@ describe('Payroll SaaS API Integration Tests', () => {
             if (!cnssComp) throw new Error("Payslip API: SalaryComponent 'CNSS_EMPLOYEE' not found for TechSolutions");
             cnssComponentId = cnssComp.id;
 
-            const igrComp = await SalaryComponent.findOne({ where: { component_code: 'IGR_EMPLOYEE', tenantId: techSolutionsTenantId }}); // Assuming IGR_EMPLOYEE exists
-            if (!igrComp) throw new Error("Payslip API: SalaryComponent 'IGR_EMPLOYEE' not found for TechSolutions. This component is needed for tax calculations.");
+            const igrComp = await SalaryComponent.findOne({ where: { component_code: 'IGR_MONTHLY', tenantId: techSolutionsTenantId }}); // Changed to IGR_MONTHLY
+            if (!igrComp) { // Added specific error message block for all components
+                let missing = [];
+                if (!baseComp) missing.push('BASE_SALARY_MONTHLY'); // baseComp is defined above this block
+                if (!cnssComp) missing.push('CNSS_EMPLOYEE');
+                if (!igrComp) missing.push('IGR_MONTHLY'); // Corrected here
+                console.error(`[Payslip API beforeAll] CRITICAL ERROR: One or more SalaryComponents not found for tenant ${techSolutionsTenantId}: ${missing.join(', ')}.`);
+                throw new Error(`Payslip API: Critical SalaryComponent(s) not found: ${missing.join(', ')}`);
+            }
             igrComponentId = igrComp.id;
 
 
