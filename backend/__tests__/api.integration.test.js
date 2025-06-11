@@ -469,8 +469,9 @@ describe('Payroll SaaS API Integration Tests', () => {
         let payslipApiTestPayrollRunId; // Renamed
         // Not redefining techSolutionsTenantId or ahmedBennaniEmployeeId, using globals
 
-        let baseSalaryComponentId, cnssComponentId, igrComponentId; // Removed transportComponentId, added igrComponentId
+        let baseSalaryComponentId, cnssComponentId, igrComponentId;
         let techSolutionsPayrollScheduleId;
+        let baseCompName, cnssCompName, igrCompName; // To store names for use in 'it' block
 
         beforeAll(async () => {
             console.log('Payslip API Test Suite: beforeAll started.');
@@ -490,21 +491,24 @@ describe('Payroll SaaS API Integration Tests', () => {
             const baseComp = await SalaryComponent.findOne({ where: { component_code: 'BASE_SALARY_MONTHLY', tenantId: techSolutionsTenantId }});
             if (!baseComp) throw new Error("Payslip API: SalaryComponent 'BASE_SALARY_MONTHLY' not found for TechSolutions");
             baseSalaryComponentId = baseComp.id;
+            baseCompName = baseComp.name; // Store name
 
             const cnssComp = await SalaryComponent.findOne({ where: { component_code: 'CNSS_EMPLOYEE', tenantId: techSolutionsTenantId }});
             if (!cnssComp) throw new Error("Payslip API: SalaryComponent 'CNSS_EMPLOYEE' not found for TechSolutions");
             cnssComponentId = cnssComp.id;
+            cnssCompName = cnssComp.name; // Store name
 
-            const igrComp = await SalaryComponent.findOne({ where: { component_code: 'IGR_MONTHLY', tenantId: techSolutionsTenantId }}); // Changed to IGR_MONTHLY
-            if (!igrComp) { // Added specific error message block for all components
+            const igrComp = await SalaryComponent.findOne({ where: { component_code: 'IGR_MONTHLY', tenantId: techSolutionsTenantId }});
+            if (!baseComp || !cnssComp || !igrComp) { // Combined check after all fetches
                 let missing = [];
-                if (!baseComp) missing.push('BASE_SALARY_MONTHLY'); // baseComp is defined above this block
+                if (!baseComp) missing.push('BASE_SALARY_MONTHLY');
                 if (!cnssComp) missing.push('CNSS_EMPLOYEE');
-                if (!igrComp) missing.push('IGR_MONTHLY'); // Corrected here
+                if (!igrComp) missing.push('IGR_MONTHLY');
                 console.error(`[Payslip API beforeAll] CRITICAL ERROR: One or more SalaryComponents not found for tenant ${techSolutionsTenantId}: ${missing.join(', ')}.`);
                 throw new Error(`Payslip API: Critical SalaryComponent(s) not found: ${missing.join(', ')}`);
             }
             igrComponentId = igrComp.id;
+            igrCompName = igrComp.name; // Store name
 
 
             // 1. Create PayrollRun
@@ -537,9 +541,9 @@ describe('Payroll SaaS API Integration Tests', () => {
             // Base Salary Item
             const baseSalaryItemData = {
                 payslipId: payslipApiTestPayslipId,
-                salaryComponentId: baseSalaryComponentId, // baseComp.id from earlier fetch
+                salaryComponentId: baseSalaryComponentId,
                 tenantId: techSolutionsTenantId,
-                description: baseComp.name + " (Suite Test Payslip Mars)", // Use baseComp.name
+                description: baseCompName + " (Suite Test Payslip Mars)",
                 type: 'earning',
                 amount: "7500.00"
             };
@@ -549,15 +553,15 @@ describe('Payroll SaaS API Integration Tests', () => {
                 console.log("[Payslip API beforeAll] Successfully created Base Salary PayslipItem:", item1.toJSON());
             } catch (error) {
                 console.error("[Payslip API beforeAll] ERROR creating Base Salary PayslipItem:", error);
-                throw error; // Re-throw to fail fast if critical item creation fails
+                throw error;
             }
 
             // CNSS Item
             const cnssItemData = {
                 payslipId: payslipApiTestPayslipId,
-                salaryComponentId: cnssComponentId, // cnssComp.id from earlier fetch
+                salaryComponentId: cnssComponentId,
                 tenantId: techSolutionsTenantId,
-                description: cnssComp.name + " (Suite Test Payslip Mars)", // Use cnssComp.name
+                description: cnssCompName + " (Suite Test Payslip Mars)",
                 type: 'deduction',
                 amount: "505.50"
             };
@@ -567,15 +571,15 @@ describe('Payroll SaaS API Integration Tests', () => {
                 console.log("[Payslip API beforeAll] Successfully created CNSS PayslipItem:", item2.toJSON());
             } catch (error) {
                 console.error("[Payslip API beforeAll] ERROR creating CNSS PayslipItem:", error);
-                throw error; // Re-throw
+                throw error;
             }
 
             // IGR Item
             const igrItemData = {
                 payslipId: payslipApiTestPayslipId,
-                salaryComponentId: igrComponentId, // igrComp.id from earlier fetch
+                salaryComponentId: igrComponentId,
                 tenantId: techSolutionsTenantId,
-                description: igrComp.name + " (Suite Test Payslip Mars)", // Use igrComp.name
+                description: igrCompName + " (Suite Test Payslip Mars)",
                 type: 'tax',
                 amount: "1200.00"
             };
@@ -585,7 +589,7 @@ describe('Payroll SaaS API Integration Tests', () => {
                 console.log("[Payslip API beforeAll] Successfully created IGR PayslipItem:", item3.toJSON());
             } catch (error) {
                 console.error("[Payslip API beforeAll] ERROR creating IGR PayslipItem:", error);
-                throw error; // Re-throw
+                throw error;
             }
             console.log(`Payslip API Test Suite: Finished creating PayslipItems for Payslip ID: ${payslipApiTestPayslipId}`);
         });
@@ -620,23 +624,23 @@ describe('Payroll SaaS API Integration Tests', () => {
             expect(response.body).toHaveProperty('taxes', "1200.00");    // Expect String
             expect(response.body).toHaveProperty('netPay', "5794.50");   // Expect String
 
-            expect(response.body.items).toBeDefined();
-            expect(Array.isArray(response.body.items)).toBe(true);
-            expect(response.body.items.length).toBe(3); // Adjusted (Base, CNSS, IGR)
+            expect(response.body.payslipItems).toBeDefined();
+            expect(Array.isArray(response.body.payslipItems)).toBe(true);
+            expect(response.body.payslipItems.length).toBe(3);
 
-            const baseSalaryItem = response.body.items.find(item => item.description === "Salaire de Base (Suite Test Payslip Mars)");
+            const baseSalaryItem = response.body.payslipItems.find(item => item.description === baseCompName + " (Suite Test Payslip Mars)");
             expect(baseSalaryItem).toBeDefined();
-            expect(baseSalaryItem.amount).toBe("7500.00"); // Expect String
+            expect(baseSalaryItem.amount).toBe("7500.00");
             expect(baseSalaryItem.salaryComponent.id).toBe(baseSalaryComponentId);
 
-            const cnssItem = response.body.items.find(item => item.description === "Cotisation CNSS (Suite Test Payslip Mars)");
+            const cnssItem = response.body.payslipItems.find(item => item.description === cnssCompName + " (Suite Test Payslip Mars)");
             expect(cnssItem).toBeDefined();
-            expect(cnssItem.amount).toBe("505.50"); // Expect String
+            expect(cnssItem.amount).toBe("505.50");
             expect(cnssItem.salaryComponent.id).toBe(cnssComponentId);
 
-            const igrItem = response.body.items.find(item => item.description === "IGR (Suite Test Payslip Mars)");
+            const igrItem = response.body.payslipItems.find(item => item.description === igrCompName + " (Suite Test Payslip Mars)");
             expect(igrItem).toBeDefined();
-            expect(igrItem.amount).toBe("1200.00"); // Expect String
+            expect(igrItem.amount).toBe("1200.00");
             expect(igrItem.salaryComponent.id).toBe(igrComponentId);
         });
 
