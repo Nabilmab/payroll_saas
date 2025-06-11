@@ -1,7 +1,7 @@
 // frontend/src/features/salaryComponents/components/SalaryComponentList.tsx
 import React, { FC } from 'react';
 import { SalaryComponent } from '../../../types'; // Ensure this path is correct
-import formatFinancialValue from '../../../../utils/formatAmount';
+import formatFinancialValue from '../../../utils/formatAmount';
 
 import {
   Table,
