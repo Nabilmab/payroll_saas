@@ -18,9 +18,9 @@ const SalaryComponentsPage: React.FC = () => {
       setTimeout(() => {
         resolve([
           // Sample data - replace with actual fetched data
-          { id: '1', name: 'Basic Salary', type: 'earning', calculation_type: 'fixed', default_amount: 50000, is_taxable: true, is_system_defined: false, is_active: true },
-          { id: '2', name: 'House Rent Allowance', type: 'earning', calculation_type: 'percentage', default_amount: 40, is_taxable: true, is_system_defined: false, is_active: true },
-          { id: '3', name: 'Provident Fund', type: 'deduction', calculation_type: 'fixed', default_amount: 1800, is_taxable: false, is_system_defined: true, is_active: true },
+          { id: '1', name: 'Basic Salary', type: 'earning', calculation_type: 'fixed', amount: 50000, is_taxable: true, is_system_defined: false, is_active: true, percentage: null },
+          { id: '2', name: 'House Rent Allowance', type: 'earning', calculation_type: 'percentage', percentage: 40, is_taxable: true, is_system_defined: false, is_active: true, amount: null },
+          { id: '3', name: 'Provident Fund', type: 'deduction', calculation_type: 'fixed', amount: 1800, is_taxable: false, is_system_defined: true, is_active: true, percentage: null },
         ]);
       }, 1000);
     });
