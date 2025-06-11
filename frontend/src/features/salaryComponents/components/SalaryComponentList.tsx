@@ -1,8 +1,7 @@
 // frontend/src/features/salaryComponents/components/SalaryComponentList.tsx
 import React, { FC } from 'react';
-import { SalaryComponent } from '../../../types';
+import { SalaryComponent } from '../../../types'; // Ensure this path is correct
 
-// These imports should now work because of the ChakraProvider setup
 import {
   Table,
   Thead,
@@ -11,11 +10,15 @@ import {
   Th,
   Td,
   TableContainer,
-  Button,
+  Button, // Retained for consistency if preferred, but IconButton is used below
   Text,
   Box,
-  Switch
+  Switch,
+  Badge,   // For better visual distinction of type/status
+  Tooltip, // For better UX on disabled actions
+  IconButton, // Alternative for actions
 } from '@chakra-ui/react';
+import { EditIcon, DeleteIcon } from '@chakra-ui/icons'; // For IconButton actions
 
 interface SalaryComponentListProps {
   components: SalaryComponent[];
@@ -26,67 +29,120 @@ interface SalaryComponentListProps {
 
 const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit, onDelete, onToggleActive }) => {
   if (!components || components.length === 0) {
-    return <Text mt="4">No salary components found. Create one to get started!</Text>;
+    // This is a basic way to handle no components.
+    // The parent page (SalaryComponentsPage) might have a more elaborate empty state.
+    return null;
   }
 
+  const formatAmount = (component: SalaryComponent): string => {
+    if (component.calculation_type === 'fixed') {
+      return component.amount != null ? component.amount.toFixed(2) : 'N/A';
+    }
+    if (component.calculation_type === 'percentage') {
+      return component.percentage != null ? `${component.percentage.toFixed(2)}%` : 'N/A';
+    }
+    if (component.calculation_type === 'formula') {
+      return 'Formula'; // Or some other placeholder
+    }
+    return 'N/A';
+  };
+
   return (
-    <TableContainer borderWidth="1px" borderRadius="md" mt="4">
-      <Table variant="simple">
-        <Thead>
+    <TableContainer bg="white" boxShadow="sm" borderRadius="lg" p={4}>
+      <Table variant="simple" size="md">
+        <Thead bg="gray.50">
           <Tr>
             <Th>Name</Th>
             <Th>Type</Th>
-            <Th isNumeric>Value</Th>
+            <Th>Calculation</Th>
+            <Th>Value</Th>
             <Th>Taxable</Th>
-            <Th>Active</Th>
+            <Th>Status</Th>
             <Th>Origin</Th>
             <Th>Actions</Th>
           </Tr>
         </Thead>
         <Tbody>
           {components.map((component) => (
-            <Tr key={component.id}>
-              <Td>{component.name}</Td>
-              <Td textTransform="capitalize">{component.type}</Td>
-              <Td isNumeric>
-                {(() => {
-                  if (component.calculation_type === 'fixed' && component.amount != null) {
-                    return component.amount.toFixed(2);
-                  } else if (component.calculation_type === 'percentage' && component.percentage != null) {
-                    return `${component.percentage.toFixed(2)}%`;
-                  }
-                  return 'N/A';
-                })()}
+            <Tr key={component.id} _hover={{ bg: "gray.50" }}>
+              <Td>
+                <Text fontWeight="medium">{component.name}</Text>
+                {component.description && <Text fontSize="sm" color="gray.500">{component.description}</Text>}
               </Td>
+              <Td>
+                <Badge
+                  colorScheme={component.type === 'earning' ? 'green' : 'red'}
+                  variant="subtle"
+                  px={2}
+                  py={1}
+                  borderRadius="md"
+                >
+                  {component.type.charAt(0).toUpperCase() + component.type.slice(1)}
+                </Badge>
+              </Td>
+              <Td textTransform="capitalize">
+                {component.calculation_type.replace('_', ' ')}
+              </Td>
+              <Td fontWeight="medium">{formatAmount(component)}</Td>
               <Td>{component.is_taxable ? 'Yes' : 'No'}</Td>
               <Td>
-                <Switch
-                  id={`active-switch-${component.id}`}
-                  isChecked={component.is_active}
-                  onChange={() => onToggleActive(component)}
-                  colorScheme="green"
-                  isDisabled={component.is_system_defined}
-                />
+                {!component.is_system_defined ? (
+                  <Tooltip label={component.is_active ? "Deactivate Component" : "Activate Component"} placement="top">
+                    <Switch
+                      id={`active-switch-${component.id}`}
+                      isChecked={component.is_active}
+                      onChange={() => onToggleActive(component)}
+                      colorScheme="teal"
+                      size="md"
+                    />
+                  </Tooltip>
+                ) : (
+                  <Badge
+                    colorScheme={component.is_active ? 'teal' : 'gray'}
+                    variant="solid"
+                    px={2}
+                    py={1}
+                    borderRadius="md"
+                  >
+                    {component.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                )}
               </Td>
-              <Td>{component.is_system_defined ? 'System' : 'Custom'}</Td>
+              <Td>
+                <Badge
+                  colorScheme={component.is_system_defined ? 'blue' : 'purple'}
+                  variant="outline"
+                  px={2}
+                  py={1}
+                  borderRadius="md"
+                >
+                  {component.is_system_defined ? 'System' : 'Custom'}
+                </Badge>
+              </Td>
               <Td>
                 <Box display="flex" gap={2}>
-                  <Button
-                    size="sm"
-                    colorScheme="blue"
-                    onClick={() => onEdit(component)}
-                    isDisabled={component.is_system_defined}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    colorScheme="red"
-                    onClick={() => onDelete(component.id)}
-                    isDisabled={component.is_system_defined}
-                  >
-                    Delete
-                  </Button>
+                  <Tooltip label="Edit Component" placement="top">
+                    <IconButton
+                      aria-label="Edit"
+                      icon={<EditIcon />}
+                      size="sm"
+                      colorScheme="blue"
+                      variant="outline"
+                      onClick={() => onEdit(component)}
+                      isDisabled={component.is_system_defined}
+                    />
+                  </Tooltip>
+                  <Tooltip label="Delete Component" placement="top">
+                    <IconButton
+                      aria-label="Delete"
+                      icon={<DeleteIcon />}
+                      size="sm"
+                      colorScheme="red"
+                      variant="outline"
+                      onClick={() => onDelete(component.id)}
+                      isDisabled={component.is_system_defined}
+                    />
+                  </Tooltip>
                 </Box>
               </Td>
             </Tr>
