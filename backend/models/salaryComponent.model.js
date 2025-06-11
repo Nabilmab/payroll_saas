@@ -36,6 +36,11 @@ module.exports = (sequelize, DataTypes) => {
       //   as: 'employees',
       //   through: { amount: DataTypes.DECIMAL(10, 2) } // Example of additional attribute in join table
       // });
+
+      SalaryComponent.hasMany(models.PayslipItem, { // Added PayslipItem association
+        foreignKey: 'salaryComponentId', // This is the foreign key in the PayslipItem model
+        as: 'payslipItems'           // Alias to access payslip items from a salary component instance
+      });
     }
   }
 

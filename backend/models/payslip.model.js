@@ -7,8 +7,8 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       Payslip.belongsTo(models.PayrollRun, { foreignKey: 'payrollRunId', as: 'payrollRun' });
       Payslip.hasMany(models.PayslipItem, { foreignKey: 'payslipId', as: 'payslipItems' });
+      Payslip.belongsTo(models.Employee, { foreignKey: 'employeeId', as: 'employee' }); // Added Employee association
       // Payslip.belongsTo(models.Tenant, { foreignKey: 'tenantId', as: 'tenant' }); // Example for future
-      // Payslip.belongsTo(models.Employee, { foreignKey: 'employeeId', as: 'employee' }); // Example for future
     }
   }
 
@@ -77,16 +77,16 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payslips',
     timestamps: true, // createdAt, updatedAt
     paranoid: true,   // For soft deletes, if payslip history needs to be robustly kept
-    underscored: true, // For snake_case column names like gross_pay, net_pay
+    // underscored: true, // Removed for camelCase consistency
     indexes: [
-      // { fields: ['tenant_id'] }, // Add back if associations are restored
-      // { fields: ['employee_id'] }, // Add back if associations are restored
-      { fields: ['payroll_run_id'] }, // Add back if associations are restored
+      // { fields: ['tenantId'] }, // Updated for camelCase if associations restored
+      // { fields: ['employeeId'] }, // Updated for camelCase if associations restored
+      { fields: ['payrollRunId'] }, // Updated to camelCase
       // A payslip should be unique per employee per payroll run
       {
         unique: true,
-        fields: ['employee_id', 'payroll_run_id'],
-        name: 'unique_employee_payslip_for_run'
+        fields: ['employeeId', 'payrollRunId'], // Updated to camelCase
+        name: 'unique_employee_payslip_for_run' // Name can remain snake_case
       }
     ]
   });

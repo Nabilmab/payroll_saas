@@ -74,7 +74,7 @@ module.exports = (sequelize, DataTypes) => {
         'pending', 'processing', 'pending_review', 'pending_approval',
         'approved', 'paid', 'partially_paid', 'failed', 'cancelled'
       ),
-      defaultValue: 'pending',
+      defaultValue: 'pending_review',
       allowNull: false,
     },
     totalGrossPay: { // Renamed from total_gross_pay
@@ -91,11 +91,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     // Other fields like total_employees, total_employer_taxes, user IDs, timestamps
     // from the previous version are kept for completeness unless specified otherwise.
-    total_employees: {
+    totalEmployees: { // Renamed from total_employees
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    total_employer_taxes: {
+    totalEmployerTaxes: { // Renamed from total_employer_taxes
       type: DataTypes.DECIMAL(15, 2),
       allowNull: true,
     },
@@ -111,11 +111,11 @@ module.exports = (sequelize, DataTypes) => {
       // references: { model: 'users', key: 'id' }, // Associations commented out
       // onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
-    processed_at: {
+    processedAt: { // Renamed from processed_at
       type: DataTypes.DATE,
       allowNull: true,
     },
-    approved_at: {
+    approvedAt: { // Renamed from approved_at
       type: DataTypes.DATE,
       allowNull: true,
     },
@@ -129,7 +129,7 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payroll_runs', // Keeping original table name
     timestamps: true,
     paranoid: true,
-    underscored: true, // Will use period_start, period_end, payment_date in DB
+    // underscored: true, // Removed as per instruction
                        // but totalGrossPay etc. will be totalGrossPay in DB.
                        // For consistency, I should probably stick to one naming convention.
                        // The prompt implies camelCase for attributes, so I'll remove underscored: true
@@ -138,14 +138,14 @@ module.exports = (sequelize, DataTypes) => {
                        // I will keep underscored:true for now as it was in the previous version,
                        // meaning DB columns will be snake_case for fields like periodStart.
     indexes: [
-      // { fields: ['tenant_id'] }, // Re-add if associations are restored
-      // { fields: ['pay_schedule_id'] }, // Re-add if associations are restored
+      // { fields: ['tenantId'] }, // Updated for camelCase if associations restored
+      // { fields: ['payScheduleId'] }, // Updated for camelCase if associations restored
       { fields: ['status'] },
-      { fields: ['payment_date'] }, // This will be payment_date in DB due to underscored:true
+      { fields: ['paymentDate'] }, // Updated to camelCase
       {
         unique: true,
-        fields: ['tenant_id', 'pay_schedule_id', 'period_end'], // period_end due to underscored:true
-        name: 'unique_tenant_schedule_period_run'
+        fields: ['tenantId', 'payScheduleId', 'periodEnd', 'status'], // Added status field
+        name: 'unique_tenant_schedule_period_run' // Name can remain snake_case as it's a constraint name
       }
     ]
   });

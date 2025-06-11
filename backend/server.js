@@ -3,8 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./models'); // We only need sequelize to test connection here
 const { Op } = require('sequelize');
+const validator = require('validator'); // Added validator import
 
 // CORRECTED: Import ALL models you'll need for your routes
+// User, Role, Department, EmployeeDependent were already there. Ensured others are present.
 const { User, Role, Employee, Department, SalaryComponent, Payslip, PayrollRun, PayslipItem, EmployeeDependent } = require('./models');
 
 const app = express();
@@ -564,6 +566,93 @@ app.get('/api/employees/:employeeId/ytd-summary', authenticateAndAttachUser, asy
   }
 });
 
+// --- PAYSLIP ROUTES ---
+
+// GET a specific payslip by ID
+app.get('/api/payslips/:payslipId', authenticateAndAttachUser, async (req, res) => {
+    try {
+        const { tenantId } = req.user; // Assuming authenticateAndAttachUser adds user to req
+        const { payslipId } = req.params;
+
+        if (!validator.isUUID(payslipId)) {
+            return res.status(400).json({ error: 'Invalid payslip ID format. Please provide a valid UUID.' });
+        }
+
+        const payslip = await Payslip.findOne({
+            where: { id: payslipId, tenantId },
+            include: [
+                {
+                    model: Employee,
+                    as: 'employee', // Ensure this alias matches your Payslip model association
+                    attributes: ['id', 'first_name', 'last_name', 'email']
+                },
+                {
+                    model: PayrollRun,
+                    as: 'payrollRun', // Ensure this alias matches your Payslip model association
+                    attributes: ['id', 'periodStart', 'periodEnd', 'paymentDate']
+                },
+                {
+                    model: PayslipItem,
+                    as: 'payslipItems', // Ensure this alias matches your Payslip model association
+                    include: [{
+                        model: SalaryComponent,
+                        as: 'salaryComponent', // Ensure this alias matches your PayslipItem model association
+                        attributes: ['id', 'name', 'type', 'category', 'component_code']
+                    }],
+                    // Example ordering, adjust if SalaryComponent model doesn't have 'payslip_display_order'
+                    // or if 'createdAt' is not desired for PayslipItem ordering.
+                    // Consider if 'payslip_display_order' is on PayslipItem itself or SalaryComponent.
+                    // If on PayslipItem: order: [['payslip_display_order', 'ASC'], ['createdAt', 'ASC']]
+                    // If on SalaryComponent (as shown):
+                    order: [[{model: SalaryComponent, as: 'salaryComponent'}, 'payslip_display_order', 'ASC NULLS LAST'], ['createdAt', 'ASC']]
+                }
+            ]
+        });
+
+        if (!payslip) {
+            return res.status(404).json({ error: 'Payslip not found or access denied.' });
+        }
+        res.json(payslip);
+    } catch (error) {
+        console.error('Error fetching payslip:', error);
+        res.status(500).json({ error: 'Failed to fetch payslip.' });
+    }
+});
+
+// GET all payslips for a specific employee
+app.get('/api/employees/:employeeId/payslips', authenticateAndAttachUser, async (req, res) => {
+    try {
+        const { tenantId } = req.user; // Assuming authenticateAndAttachUser adds user to req
+        const { employeeId } = req.params;
+
+        if (!validator.isUUID(employeeId)) {
+            return res.status(400).json({ error: 'Invalid employee ID format. Please provide a valid UUID.' });
+        }
+
+        const employee = await Employee.findOne({ where: { id: employeeId, tenantId } });
+        if (!employee) {
+            // Behavior from user feedback: return empty array if employee not found
+            return res.json([]);
+        }
+
+        const payslips = await Payslip.findAll({
+            where: { employeeId, tenantId },
+            include: [
+                {
+                    model: PayrollRun,
+                    as: 'payrollRun',
+                    attributes: ['id', 'periodEnd', 'paymentDate']
+                }
+            ],
+            // Order by periodEnd of the payrollRun in descending order
+            order: [[{ model: PayrollRun, as: 'payrollRun' }, 'periodEnd', 'DESC']]
+        });
+        res.json(payslips);
+    } catch (error) {
+        console.error('Error fetching employee payslips:', error);
+        res.status(500).json({ error: 'Failed to fetch employee payslips.' });
+    }
+});
 
 // --- Start the Server ---
 const startServer = async () => {

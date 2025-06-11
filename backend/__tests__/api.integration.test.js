@@ -219,14 +219,38 @@ describe('Payroll SaaS API Integration Tests', () => {
 
             // Create a PayrollRun for Jan 2024
             const janRunDate = new Date('2024-01-31T00:00:00.000Z');
-            const janPayrollRun = await PayrollRun.create({
+            const janPeriodStart = new Date('2024-01-01T00:00:00.000Z');
+            const janPaymentDate = new Date('2024-02-05T00:00:00.000Z');
+
+            // In YTD beforeAll, before PayrollRun.create for January
+            console.log("YTD beforeAll - ABOUT TO CREATE JAN PAYROLL RUN.");
+            console.log("YTD beforeAll - techSolutionsTenantId:", techSolutionsTenantId);
+            console.log("YTD beforeAll - techSolutionsPayrollSchedule.id:", techSolutionsPayrollSchedule ? techSolutionsPayrollSchedule.id : 'PaySchedule IS NULL/UNDEFINED');
+            console.log("YTD beforeAll - janRunDate (periodEnd):", janRunDate ? janRunDate.toISOString() : 'janRunDate IS NULL/UNDEFINED');
+            console.log("YTD beforeAll - periodStart for create:", janPeriodStart.toISOString());
+            console.log("YTD beforeAll - paymentDate for create:", janPaymentDate.toISOString());
+            console.log("YTD beforeAll - status for create:", 'completed');
+
+            const janPayrollRunData = {
                 tenantId: techSolutionsTenantId,
                 payScheduleId: techSolutionsPayrollSchedule.id,
-                periodStart: new Date('2024-01-01T00:00:00.000Z'),
+                periodStart: janPeriodStart,
                 periodEnd: janRunDate,
-                paymentDate: new Date('2024-02-05T00:00:00.000Z'),
+                paymentDate: janPaymentDate,
                 status: 'completed'
-            });
+            };
+            console.log("YTD beforeAll - Data object for Jan PayrollRun.create:", JSON.stringify(janPayrollRunData, null, 2));
+
+            let janPayrollRun;
+            try {
+                janPayrollRun = await PayrollRun.create(janPayrollRunData);
+            } catch (error) {
+                console.error("YTD beforeAll - ERROR directly creating Jan PayrollRun:", error);
+                if (error.original) {
+                    console.error("YTD beforeAll - Original DB Error for Jan PayrollRun:", error.original);
+                }
+                throw error;
+            }
             janPayrollRunId = janPayrollRun.id;
             testPayrollRunId = janPayrollRunId; // Keep testPayrollRunId for compatibility if other parts of code use it by that name
 
@@ -272,14 +296,38 @@ describe('Payroll SaaS API Integration Tests', () => {
 
             // Create a PayrollRun for Feb 2024
             const febRunDate = new Date('2024-02-29T00:00:00.000Z');
-            const febPayrollRun = await PayrollRun.create({
+            const febPeriodStart = new Date('2024-02-01T00:00:00.000Z');
+            const febPaymentDate = new Date('2024-03-05T00:00:00.000Z');
+
+            // In YTD beforeAll, before PayrollRun.create for February
+            console.log("YTD beforeAll - ABOUT TO CREATE FEB PAYROLL RUN.");
+            console.log("YTD beforeAll - techSolutionsTenantId:", techSolutionsTenantId);
+            console.log("YTD beforeAll - techSolutionsPayrollSchedule.id:", techSolutionsPayrollSchedule ? techSolutionsPayrollSchedule.id : 'PaySchedule IS NULL/UNDEFINED');
+            console.log("YTD beforeAll - febRunDate (periodEnd):", febRunDate ? febRunDate.toISOString() : 'febRunDate IS NULL/UNDEFINED');
+            console.log("YTD beforeAll - periodStart for create:", febPeriodStart.toISOString());
+            console.log("YTD beforeAll - paymentDate for create:", febPaymentDate.toISOString());
+            console.log("YTD beforeAll - status for create:", 'completed');
+
+            const febPayrollRunData = {
                 tenantId: techSolutionsTenantId,
                 payScheduleId: techSolutionsPayrollSchedule.id,
-                periodStart: new Date('2024-02-01T00:00:00.000Z'),
+                periodStart: febPeriodStart,
                 periodEnd: febRunDate,
-                paymentDate: new Date('2024-03-05T00:00:00.000Z'),
+                paymentDate: febPaymentDate,
                 status: 'completed'
-            });
+            };
+            console.log("YTD beforeAll - Data object for Feb PayrollRun.create:", JSON.stringify(febPayrollRunData, null, 2));
+
+            let febPayrollRun;
+            try {
+                febPayrollRun = await PayrollRun.create(febPayrollRunData);
+            } catch (error) {
+                console.error("YTD beforeAll - ERROR directly creating Feb PayrollRun:", error);
+                if (error.original) {
+                    console.error("YTD beforeAll - Original DB Error for Feb PayrollRun:", error.original);
+                }
+                throw error;
+            }
             febPayrollRunId = febPayrollRun.id;
 
             // Create a Payslip for Ahmed Bennani for Feb 2024 (different amounts)
