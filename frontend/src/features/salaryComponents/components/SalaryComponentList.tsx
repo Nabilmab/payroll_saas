@@ -36,7 +36,7 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
           <Tr>
             <Th>Name</Th>
             <Th>Type</Th>
-            <Th isNumeric>Default Amount</Th>
+            <Th isNumeric>Value</Th>
             <Th>Taxable</Th>
             <Th>Active</Th>
             <Th>Origin</Th>
@@ -49,7 +49,14 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
               <Td>{component.name}</Td>
               <Td textTransform="capitalize">{component.type}</Td>
               <Td isNumeric>
-                {component.default_amount != null ? component.default_amount.toFixed(2) : 'N/A'}
+                {(() => {
+                  if (component.calculation_type === 'fixed' && component.amount != null) {
+                    return component.amount.toFixed(2);
+                  } else if (component.calculation_type === 'percentage' && component.percentage != null) {
+                    return `${component.percentage.toFixed(2)}%`;
+                  }
+                  return 'N/A';
+                })()}
               </Td>
               <Td>{component.is_taxable ? 'Yes' : 'No'}</Td>
               <Td>
