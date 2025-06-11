@@ -15,6 +15,15 @@ let khalidBennaniDependentId;
 describe('Payroll SaaS API Integration Tests', () => {
 
     beforeAll(async () => {
+        try {
+            await sequelize.authenticate();
+            console.log('Database connection has been established successfully.');
+        } catch (error) {
+            console.error('Unable to connect to the database:', error);
+            // It might be useful to throw the error here to stop tests if DB is not available
+            // throw new Error('Database connection failed, stopping tests.');
+        }
+
         // Ensure the server is running if testing against a live dev server.
         // For more isolated tests, you'd import your app from server.js and pass it to request(app).
 
@@ -89,11 +98,11 @@ describe('Payroll SaaS API Integration Tests', () => {
                 .post('/api/employees/invalid-uuid/dependents')
                 .send(newDependentPayload);
             expect(response.statusCode).toBe(400);
-            expect(response.body.error).toMatch(/Invalid employeeId format/i);
+            expect(response.body.error).toBe("Invalid employee ID format. Please provide a valid UUID.");
         });
 
         it('POST /api/employees/:employeeId/dependents - should fail with 404 if employeeId does not exist', async () => {
-            const nonExistentUUID = '00000000-0000-0000-0000-000000000000';
+            const nonExistentUUID = '123e4567-e89b-12d3-a456-426614174000';
             const response = await request(API_BASE_URL)
                 .post(`/api/employees/${nonExistentUUID}/dependents`)
                 .send(newDependentPayload);
@@ -201,6 +210,9 @@ describe('Payroll SaaS API Integration Tests', () => {
             if (!techSolutionsPayrollSchedule) throw new Error("Paiement Mensuel Standard schedule not found for YTD test.");
 
             const testRunDate = new Date('2024-01-31'); // Use a consistent date for predictability
+            console.log('YTD beforeAll - techSolutionsTenantId:', techSolutionsTenantId);
+            console.log('YTD beforeAll - techSolutionsPayrollSchedule.id:', techSolutionsPayrollSchedule ? techSolutionsPayrollSchedule.id : 'PaySchedule NOT FOUND');
+            console.log('YTD beforeAll - testRunDate:', testRunDate);
             const [payrollRunInstance] = await PayrollRun.findOrCreate({
                 where: { tenantId: techSolutionsTenantId, payScheduleId: techSolutionsPayrollSchedule.id, periodEnd: testRunDate },
                 defaults: { periodStart: new Date('2024-01-01'), paymentDate: new Date('2024-02-05'), status: 'completed' }
