@@ -2,7 +2,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-const { sequelize, Tenant, User, Role, Department, Employee, SalaryComponent, PaySchedule } = require('../models');
+const { sequelize, Tenant, User, Role, Department, Employee, SalaryComponent, PaySchedule, EmployeeDependent } = require('../models');
 // const bcrypt = require('bcryptjs'); // User model has a hook for password hashing
 
 // --- Seed Data (from previous step, ensure it's available here) ---
@@ -171,6 +171,32 @@ const paySchedulesData = [
   }
 ];
 
+/**
+ * @typedef {Object} EmployeeDependentData
+ * @property {string} employeeEmail - Email of the employee this dependent belongs to
+ * @property {string} tenantName - Tenant name for lookup
+ * @property {string} full_name
+ * @property {string} relationship - 'spouse', 'child', 'other_relative', 'civil_partner'
+ * @property {Date} [date_of_birth]
+ * @property {boolean} [is_fiscally_dependent=true]
+ * @property {Date} [effective_start_date]
+ * @property {string} [notes]
+ * @property {EmployeeDependent?} instance
+ */
+const employeeDependentsData = [
+  // For Ahmed Bennani (TechSolutions SARL)
+  { employeeEmail: "dev.ahmed@techsolutions.ma", tenantName: "TechSolutions SARL", full_name: "Aisha Bennani", relationship: "spouse", date_of_birth: new Date("1991-08-20"), is_fiscally_dependent: true },
+  { employeeEmail: "dev.ahmed@techsolutions.ma", tenantName: "TechSolutions SARL", full_name: "Omar Bennani", relationship: "child", date_of_birth: new Date("2018-05-10"), is_fiscally_dependent: true },
+  { employeeEmail: "dev.ahmed@techsolutions.ma", tenantName: "TechSolutions SARL", full_name: "Layla Bennani", relationship: "child", date_of_birth: new Date("2020-11-02"), is_fiscally_dependent: true },
+
+  // For Fatima Zahra (TechSolutions SARL) - No dependents for this example
+
+  // For Fatima El Fassi (Artisanat Marocain Coop)
+  { employeeEmail: "artisan.fatima@artisanatmaroc.ma", tenantName: "Artisanat Marocain Coop", full_name: "Karim El Fassi", relationship: "child", date_of_birth: new Date("2005-03-15"), is_fiscally_dependent: true },
+
+  // For Youssef Tazi (Services Financiers Al Maghrib)
+  { employeeEmail: "analyste.youssef@sfalmaghrib.ma", tenantName: "Services Financiers Al Maghrib", full_name: "Sofia Tazi", relationship: "spouse", date_of_birth: new Date("1996-02-14"), is_fiscally_dependent: true },
+];
 
 // --- Seeding Functions ---
 
@@ -437,6 +463,45 @@ async function seedPaySchedules() {
   }
 }
 
+async function seedEmployeeDependents() {
+  console.log('Seeding employee dependents...');
+  for (const depData of employeeDependentsData) {
+    const tenant = tenantsData.find(t => t.name === depData.tenantName)?.instance;
+    if (!tenant) {
+      console.error(`Tenant '${depData.tenantName}' not found for dependent '${depData.full_name}'. Skipping.`);
+      continue;
+    }
+    // Find employee instance using the map created in seedEmployees or by querying
+    // Assuming employeesData array has `instance` property populated by seedEmployees()
+    const employee = employeesData.find(e => e.email === depData.employeeEmail && e.tenantName === depData.tenantName)?.instance;
+
+    if (!employee) {
+      console.error(`Employee with email '${depData.employeeEmail}' in tenant '${depData.tenantName}' not found for dependent '${depData.full_name}'. Skipping.`);
+      continue;
+    }
+
+    const [dependent, created] = await EmployeeDependent.findOrCreate({
+      where: {
+        employeeId: employee.id,
+        full_name: depData.full_name,
+        // date_of_birth: depData.date_of_birth || null, // Adding DOB to where clause for uniqueness
+      },
+      defaults: {
+        tenantId: tenant.id,
+        employeeId: employee.id,
+        full_name: depData.full_name,
+        relationship: depData.relationship,
+        date_of_birth: depData.date_of_birth || null,
+        is_fiscally_dependent: typeof depData.is_fiscally_dependent === 'boolean' ? depData.is_fiscally_dependent : true,
+        effective_start_date: depData.effective_start_date || new Date(),
+        notes: depData.notes || null,
+      },
+    });
+    depData.instance = dependent;
+    if (created) console.log(`Dependent '${dependent.full_name}' for employee '${employee.email}' created.`);
+    else console.log(`Dependent '${dependent.full_name}' for employee '${employee.email}' already exists.`);
+  }
+}
 
 // --- Main Seeding Orchestration ---
 
@@ -482,6 +547,7 @@ async function seedDatabase() {
     await seedEmployees();
     await seedSalaryComponents();
     await seedPaySchedules();
+    await seedEmployeeDependents(); // <-- Add this line
 
     console.log('Database seeding completed successfully.');
   } catch (error) {
@@ -518,4 +584,5 @@ module.exports = {
   employeesData,
   salaryComponentsData,
   paySchedulesData,
+  employeeDependentsData, // <-- Add this line
 };
