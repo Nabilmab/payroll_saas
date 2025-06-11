@@ -23,7 +23,7 @@ import {
   NumberDecrementStepper,
 } from '@chakra-ui/react';
 // Adjust the import path if your types file is, e.g., src/types/index.ts or src/types/salaryComponent.ts
-import { SalaryComponent, SalaryComponentFormData } from '../../../types/salaryComponent';
+import { SalaryComponent, SalaryComponentFormData } from '../../../types';
 
 interface SalaryComponentModalProps {
   isOpen: boolean;

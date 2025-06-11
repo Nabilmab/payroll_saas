@@ -16,8 +16,8 @@ export interface Tenant {
   id: UUID;
   name: string;
   description?: string | null;
-  status: 'active' | 'inactive' | 'suspended' | 'trial'; // Added 'trial' from earlier model
-  schema_name: string; // As per your model
+  status: 'active' | 'inactive' | 'suspended' | 'trial';
+  schema_name: string;
   createdAt?: IsoDateString;
   updatedAt?: IsoDateString;
   deletedAt?: IsoDateString | null;
@@ -35,19 +35,18 @@ export interface Role {
 }
 
 // --- User ---
-// This is the User object you might receive AFTER login (password_hash excluded)
 export interface User {
   id: UUID;
   tenantId: UUID;
-  firstName: string; // Was first_name in some backend models, ensure consistency
-  lastName: string;  // Was last_name in some backend models, ensure consistency
+  firstName: string;
+  lastName: string;
   email: string;
-  status: 'active' | 'inactive' | 'pending_verification' | 'invited' | 'deactivated'; // Combined statuses
+  status: 'active' | 'inactive' | 'pending_verification' | 'invited' | 'deactivated';
   last_login_at?: IsoDateString | null;
   createdAt?: IsoDateString;
   updatedAt?: IsoDateString;
   deletedAt?: IsoDateString | null;
-  roles?: Role[]; // If you decide to send roles with the user object
+  roles?: Role[];
 }
 
 // --- Department ---
@@ -56,35 +55,31 @@ export interface Department {
   tenantId: UUID;
   name: string;
   description?: string | null;
-  // managerId?: UUID | null; // If you add manager to department
   createdAt?: IsoDateString;
   updatedAt?: IsoDateString;
   deletedAt?: IsoDateString | null;
 }
 
-// --- Salary Component ---
-export type SalaryComponentType = 'earning' | 'deduction';
-export type SalaryComponentCalculationType = 'fixed' | 'percentage' | 'formula';
-
+// --- Salary Component (Corrected as per subtask) ---
 export interface SalaryComponent {
-  id: UUID;
-  tenantId?: UUID | null; // Null for system-defined
+  id: string; // UUID is string, so this is fine
+  tenantId?: string | null; // UUID is string
   name: string;
   description?: string | null;
-  type: SalaryComponentType;
-  calculation_type: SalaryComponentCalculationType;
-  default_amount?: number | null;
-  percentage?: number | null;          // For system percentage components
-  basedOnComponentId?: UUID | null;    // For system percentage components
-  formula_json?: Record<string, any> | null; // For system formula components
+  type: 'earning' | 'deduction';
+  calculation_type: 'fixed' | 'percentage' | 'formula'; // Key field
+  amount?: number | null;
+  percentage?: number | null;
   is_taxable: boolean;
-  is_system_defined: boolean;
   is_active: boolean;
+  is_system_defined: boolean;
   payslip_display_order?: number | null;
-  component_code?: string | null;      // For system components like 'BASE_SALARY_MONTHLY'
-  is_cnss_subject?: boolean;
-  is_amo_subject?: boolean;
-  createdAt?: IsoDateString;
+  component_code?: string | null;
+  is_cnss_subject?: boolean; // Added as per definition
+  is_amo_subject?: boolean;  // Added as per definition
+  // Removed: default_amount (replaced by amount), basedOnComponentId, formula_json
+  // Added (if they were missing, though they seem to align with original model): createdAt, updatedAt, deletedAt
+  createdAt?: IsoDateString; // Ensuring these are present if part of a full model
   updatedAt?: IsoDateString;
   deletedAt?: IsoDateString | null;
 }
@@ -95,26 +90,23 @@ export interface Employee {
   tenantId: UUID;
   departmentId?: UUID | null;
   userId?: UUID | null;
-  employee_id_alt?: string | null; // From your model
+  employee_id_alt?: string | null;
   first_name: string;
   last_name: string;
   email?: string | null;
   phone_number?: string | null;
-  address?: string | null; // Added from seed data discussion
+  address?: string | null;
   job_title?: string | null;
-  date_of_birth?: IsoDateString | null; // Should be DATEONLY string 'YYYY-MM-DD' from backend
-  hire_date: IsoDateString;         // Should be DATEONLY string 'YYYY-MM-DD' from backend
-  termination_date?: IsoDateString | null; // Should be DATEONLY string 'YYYY-MM-DD' from backend
+  date_of_birth?: IsoDateString | null;
+  hire_date: IsoDateString;
+  termination_date?: IsoDateString | null;
   status: 'active' | 'on_leave' | 'terminated' | 'pending_hire';
-  reportingManagerId?: UUID | null; // Renamed from your seed, ensure model matches
+  reportingManagerId?: UUID | null;
   payScheduleId?: UUID | null;
   createdAt?: IsoDateString;
   updatedAt?: IsoDateString;
   deletedAt?: IsoDateString | null;
-  // Included data
   department?: Department;
-  // userAccount?: User; // if you include user for employee
-  // employeeSalarySettings?: EmployeeSalarySetting[]; // Usually fetched separately
 }
 
 // --- Employee Salary Setting ---
@@ -123,14 +115,13 @@ export interface EmployeeSalarySetting {
   tenantId: UUID;
   employeeId: UUID;
   salaryComponentId: UUID;
-  amount?: number | null; // Employee-specific override for fixed amounts
-  percentage?: number | null; // Employee-specific override for percentage amounts (Phase 3+)
-  effective_date: IsoDateString; // DATEONLY string 'YYYY-MM-DD'
+  amount?: number | null;
+  percentage?: number | null;
+  effective_date: IsoDateString;
   is_active: boolean;
   createdAt?: IsoDateString;
   updatedAt?: IsoDateString;
   deletedAt?: IsoDateString | null;
-  // Included data
   salaryComponent?: SalaryComponent;
 }
 
@@ -145,28 +136,29 @@ export interface LoginCredentials {
 export interface LoginResponse {
   message: string;
   user: User;
-  token: string; // Assuming JWT token is returned on login
+  token: string;
 }
 
-// For SalaryComponent CRUD
-export interface SalaryComponentFormData {
+// For SalaryComponent CRUD (Corrected as per subtask)
+export type SalaryComponentFormData = {
+  id?: string; // Optional ID for updates
   name: string;
-  description?: string;
-  type: SalaryComponentType;
-  // For Phase 2, tenant-created are 'fixed'
-  // calculation_type: SalaryComponentCalculationType; // Not set by tenant in Phase 2 for custom
-  default_amount?: number;
+  description?: string | null;
+  type: 'earning' | 'deduction';
+  calculation_type: 'fixed' | 'percentage'; // Key field
+  amount?: number | null;
+  percentage?: number | null;
   is_taxable: boolean;
-  payslip_display_order?: number;
-  // is_active is handled by a separate toggle or on update
-}
+  payslip_display_order?: number | null;
+  // Removed: default_amount (replaced by amount)
+  // Removed: commented out calculation_type, is_active (as per provided definition)
+};
 
 // For EmployeeSalarySetting CRUD
 export interface EmployeeSalarySettingFormData {
-  salaryComponentId: UUID; // Which component to assign
-  amount?: number;         // Override amount for this employee (for fixed components)
-  // percentage?: number;  // For Phase 3+
-  effective_date: string; // 'YYYY-MM-DD'
+  salaryComponentId: UUID;
+  amount?: number;
+  effective_date: string;
   is_active: boolean;
 }
 
