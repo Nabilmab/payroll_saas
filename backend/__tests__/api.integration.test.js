@@ -533,34 +533,61 @@ describe('Payroll SaaS API Integration Tests', () => {
             payslipApiTestPayslipId = payslip.id; // Use new variable name
             console.log(`Payslip API Test Suite: Created Payslip ID: ${payslipApiTestPayslipId}`);
 
-            // 3. Create PayslipItems
-            await PayslipItem.bulkCreate([
-                {
-                    tenantId: techSolutionsTenantId, // Use global
-                    payslipId: payslipApiTestPayslipId,
-                    salaryComponentId: baseSalaryComponentId,
-                    description: "Salaire de Base (Suite Test Payslip Mars)",
-                    type: 'earning',
-                    amount: 7500.00 // Adjusted
-                },
-                {
-                    tenantId: techSolutionsTenantId, // Use global
-                    payslipId: payslipApiTestPayslipId,
-                    salaryComponentId: cnssComponentId,
-                    description: "Cotisation CNSS (Suite Test Payslip Mars)",
-                    type: 'deduction',
-                    amount: 505.50 // Adjusted (7500 * 0.0674)
-                },
-                {
-                    tenantId: techSolutionsTenantId, // Use global
-                    payslipId: payslipApiTestPayslipId,
-                    salaryComponentId: igrComponentId,
-                    description: "IGR (Suite Test Payslip Mars)",
-                    type: 'tax', // Assuming 'tax' type for IGR component
-                    amount: 1200.00 // Adjusted
-                }
-            ]);
-            console.log(`Payslip API Test Suite: Created PayslipItems for Payslip ID: ${payslipApiTestPayslipId}`);
+            // 3. Create PayslipItems individually with detailed logging
+            // Base Salary Item
+            const baseSalaryItemData = {
+                payslipId: payslipApiTestPayslipId,
+                salaryComponentId: baseSalaryComponentId, // baseComp.id from earlier fetch
+                tenantId: techSolutionsTenantId,
+                description: baseComp.name + " (Suite Test Payslip Mars)", // Use baseComp.name
+                type: 'earning',
+                amount: "7500.00"
+            };
+            console.log("[Payslip API beforeAll] Attempting to create Base Salary PayslipItem with data:", baseSalaryItemData);
+            try {
+                const item1 = await PayslipItem.create(baseSalaryItemData);
+                console.log("[Payslip API beforeAll] Successfully created Base Salary PayslipItem:", item1.toJSON());
+            } catch (error) {
+                console.error("[Payslip API beforeAll] ERROR creating Base Salary PayslipItem:", error);
+                throw error; // Re-throw to fail fast if critical item creation fails
+            }
+
+            // CNSS Item
+            const cnssItemData = {
+                payslipId: payslipApiTestPayslipId,
+                salaryComponentId: cnssComponentId, // cnssComp.id from earlier fetch
+                tenantId: techSolutionsTenantId,
+                description: cnssComp.name + " (Suite Test Payslip Mars)", // Use cnssComp.name
+                type: 'deduction',
+                amount: "505.50"
+            };
+            console.log("[Payslip API beforeAll] Attempting to create CNSS PayslipItem with data:", cnssItemData);
+            try {
+                const item2 = await PayslipItem.create(cnssItemData);
+                console.log("[Payslip API beforeAll] Successfully created CNSS PayslipItem:", item2.toJSON());
+            } catch (error) {
+                console.error("[Payslip API beforeAll] ERROR creating CNSS PayslipItem:", error);
+                throw error; // Re-throw
+            }
+
+            // IGR Item
+            const igrItemData = {
+                payslipId: payslipApiTestPayslipId,
+                salaryComponentId: igrComponentId, // igrComp.id from earlier fetch
+                tenantId: techSolutionsTenantId,
+                description: igrComp.name + " (Suite Test Payslip Mars)", // Use igrComp.name
+                type: 'tax',
+                amount: "1200.00"
+            };
+            console.log("[Payslip API beforeAll] Attempting to create IGR PayslipItem with data:", igrItemData);
+            try {
+                const item3 = await PayslipItem.create(igrItemData);
+                console.log("[Payslip API beforeAll] Successfully created IGR PayslipItem:", item3.toJSON());
+            } catch (error) {
+                console.error("[Payslip API beforeAll] ERROR creating IGR PayslipItem:", error);
+                throw error; // Re-throw
+            }
+            console.log(`Payslip API Test Suite: Finished creating PayslipItems for Payslip ID: ${payslipApiTestPayslipId}`);
         });
 
         afterAll(async () => {
