@@ -115,6 +115,7 @@ const employeesData = [
 const salaryComponentsData = [
   // --- TechSolutions SARL ---
   { name: "Salaire de Base", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculation_type: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
+  { name: "Prime d'Ancienneté", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculation_type: "formula", is_taxable: true, component_code: 'SENIORITY_BONUS', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
   { name: "Indemnité de Transport", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculation_type: "fixed", amount: 500, is_taxable: false, component_code: 'TRANSPORT_ALLOWANCE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 10 },
   { name: "CNSS", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
   { name: "AMO", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
@@ -402,43 +403,107 @@ async function seedSalaryComponents() {
       continue;
     }
     const defaults = {
-        name: scData.name,
-        tenantId: tenant.id,
-        type: scData.type,
-        category: scData.category, // Added category field
+        name: scData.name, // Name is part of whereClause, but also needed in defaults for completeness
+        tenantId: tenant.id, // tenantId is part of whereClause
+        type: scData.type,   // type is part of whereClause
+        category: scData.category,
         calculation_type: scData.calculation_type,
-        is_taxable: scData.is_taxable,
+        description: scData.description || null,
+        is_taxable: typeof scData.is_taxable === 'boolean' ? scData.is_taxable : false,
         component_code: scData.component_code || null,
         is_cnss_subject: typeof scData.is_cnss_subject === 'boolean' ? scData.is_cnss_subject : false,
         is_amo_subject: typeof scData.is_amo_subject === 'boolean' ? scData.is_amo_subject : false,
         payslip_display_order: scData.payslip_display_order || null,
-        // Conditional amount and percentage
-        amount: null, // Initialize as null
-        percentage: null // Initialize as null
+        amount: null,
+        percentage: null
     };
 
     if (scData.calculation_type === 'fixed') {
-        defaults.amount = scData.amount || null; // Use scData.amount, fallback to null if undefined/zero
+        defaults.amount = scData.amount || null;
     } else if (scData.calculation_type === 'percentage') {
-        defaults.percentage = scData.percentage || null; // Use scData.percentage, fallback to null if undefined/zero
+        defaults.percentage = scData.percentage || null;
     }
-    // For 'formula', both will remain null as initialized
 
-    const [component, created] = await SalaryComponent.findOrCreate({
-      where: {
-        name: scData.name,
-        tenantId: tenant.id,
-        type: scData.type,
-        // Adding component_code to where clause if it's meant to be part of uniqueness for system components
-        // However, for tenant-defined components, component_code might be null.
-        // A more robust unique key might be tenantId + name + type (or tenantId + component_code if code is always unique per tenant for system ones)
-        // For now, keeping it as original: name, tenantId, type
-      },
+    const whereClause = {
+      name: scData.name,
+      tenantId: tenant.id,
+      type: scData.type,
+    };
+
+    let [component, created] = await SalaryComponent.findOrCreate({
+      where: whereClause,
       defaults: defaults,
     });
+
+    if (!created) {
+      let updated = false;
+      // Update component_code if it's different or if it was null and now has a value
+      if (component.component_code !== (defaults.component_code || null)) {
+        console.log(`Updating component_code for existing SalaryComponent '${component.name}' from '${component.component_code}' to '${defaults.component_code || null}'`);
+        component.component_code = defaults.component_code || null;
+        updated = true;
+      }
+      if (defaults.category && component.category !== defaults.category) {
+        console.log(`Updating category for existing SalaryComponent '${component.name}' from '${component.category}' to '${defaults.category}'`);
+        component.category = defaults.category;
+        updated = true;
+      }
+      if (component.description !== (defaults.description || null) ) {
+        console.log(`Updating description for existing SalaryComponent '${component.name}'`);
+        component.description = defaults.description || null;
+        updated = true;
+      }
+      if (typeof defaults.is_taxable === 'boolean' && component.is_taxable !== defaults.is_taxable) {
+        console.log(`Updating is_taxable for existing SalaryComponent '${component.name}' from '${component.is_taxable}' to '${defaults.is_taxable}'`);
+        component.is_taxable = defaults.is_taxable;
+        updated = true;
+      }
+      if (typeof defaults.is_cnss_subject === 'boolean' && component.is_cnss_subject !== defaults.is_cnss_subject) {
+        console.log(`Updating is_cnss_subject for existing SalaryComponent '${component.name}' from '${component.is_cnss_subject}' to '${defaults.is_cnss_subject}'`);
+        component.is_cnss_subject = defaults.is_cnss_subject;
+        updated = true;
+      }
+      if (typeof defaults.is_amo_subject === 'boolean' && component.is_amo_subject !== defaults.is_amo_subject) {
+        console.log(`Updating is_amo_subject for existing SalaryComponent '${component.name}' from '${component.is_amo_subject}' to '${defaults.is_amo_subject}'`);
+        component.is_amo_subject = defaults.is_amo_subject;
+        updated = true;
+      }
+      if (component.payslip_display_order !== (defaults.payslip_display_order || null)) {
+         console.log(`Updating payslip_display_order for existing SalaryComponent '${component.name}' from '${component.payslip_display_order}' to '${defaults.payslip_display_order || null}'`);
+        component.payslip_display_order = defaults.payslip_display_order || null;
+        updated = true;
+      }
+      if (component.calculation_type !== defaults.calculation_type) {
+        console.log(`Updating calculation_type for existing SalaryComponent '${component.name}' from '${component.calculation_type}' to '${defaults.calculation_type}'`);
+        component.calculation_type = defaults.calculation_type;
+        // When calculation_type changes, amount and percentage should be reset according to the new type
+        component.amount = defaults.amount;
+        component.percentage = defaults.percentage;
+        updated = true;
+      } else { // calculation_type is the same, check if amount/percentage needs update
+        if (defaults.calculation_type === 'fixed' && component.amount !== (defaults.amount || null) ) {
+            console.log(`Updating amount for existing 'fixed' SalaryComponent '${component.name}' from '${component.amount}' to '${defaults.amount || null}'`);
+            component.amount = defaults.amount || null;
+            updated = true;
+        }
+        if (defaults.calculation_type === 'percentage' && component.percentage !== (defaults.percentage || null) ) {
+            console.log(`Updating percentage for existing 'percentage' SalaryComponent '${component.name}' from '${component.percentage}' to '${defaults.percentage || null}'`);
+            component.percentage = defaults.percentage || null;
+            updated = true;
+        }
+      }
+      // Note: is_active and is_system_defined are not typically changed by seed data updates once created.
+
+      if (updated) {
+        await component.save();
+        console.log(`SalaryComponent '${component.name}' (Code: ${component.component_code || 'N/A'}) for tenant '${tenant.name}' (schema: ${tenant.schema_name}) updated.`);
+      } else {
+        console.log(`SalaryComponent '${component.name}' (Code: ${component.component_code || 'N/A'}) for tenant '${tenant.name}' (schema: ${tenant.schema_name}) already exists and is up-to-date.`);
+      }
+    } else {
+        console.log(`SalaryComponent '${component.name}' (Code: ${component.component_code || 'N/A'}) for tenant '${tenant.name}' (schema: ${tenant.schema_name}) created.`);
+    }
     scData.instance = component;
-    if (created) console.log(`SalaryComponent '${component.name}' (Code: ${component.component_code || 'N/A'}) for tenant '${tenant.name}' (schema: ${tenant.schema_name}) created.`);
-    else console.log(`SalaryComponent '${component.name}' (Code: ${component.component_code || 'N/A'}) for tenant '${tenant.name}' (schema: ${tenant.schema_name}) already exists.`);
   }
 }
 
