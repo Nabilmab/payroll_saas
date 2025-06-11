@@ -1,6 +1,6 @@
 // scripts/seed.js
-
-require('dotenv').config(); // THIS IS THE MISSING LINE
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { sequelize, Tenant, User, Role, Department, Employee, SalaryComponent, PaySchedule } = require('../models');
 // const bcrypt = require('bcryptjs'); // User model has a hook for password hashing
