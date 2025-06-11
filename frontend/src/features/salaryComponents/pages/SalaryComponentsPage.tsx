@@ -1,157 +1,166 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Heading } from '@chakra-ui/react';
-import SalaryComponentList from '../components/SalaryComponentList'; // Adjust path as needed
-import { SalaryComponent } from '../../../types'; // Import the central type
-// import { fetchSalaryComponents, addSalaryComponent, updateSalaryComponent, deleteSalaryComponent } from '../api'; // Adjust path to your API functions
-
-// Define a type for salary components -- REMOVED
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Box,
+  Heading,
+  Button,
+  Spinner,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  useToast, // For user feedback
+  Flex, // For layout
+} from '@chakra-ui/react';
+import SalaryComponentList from '../components/SalaryComponentList';
+import SalaryComponentModal from '../components/SalaryComponentModal';
+import { SalaryComponent, SalaryComponentFormData } from '../../../types';
+import {
+  fetchSalaryComponents,
+  addSalaryComponent,
+  updateSalaryComponent,
+  deleteSalaryComponent,
+  toggleSalaryComponentActive,
+} from '../../../services/salaryComponentApi';
 
 const SalaryComponentsPage: React.FC = () => {
   const [components, setComponents] = useState<SalaryComponent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingComponent, setEditingComponent] = useState<SalaryComponent | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const toast = useToast();
 
-  // Mock API functions (replace with actual API calls)
-  const fetchSalaryComponents = async (): Promise<SalaryComponent[]> => {
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          // Sample data - replace with actual fetched data
-          { id: '1', name: 'Basic Salary', type: 'earning', calculation_type: 'fixed', amount: 50000, is_taxable: true, is_system_defined: false, is_active: true, percentage: null },
-          { id: '2', name: 'House Rent Allowance', type: 'earning', calculation_type: 'percentage', percentage: 40, is_taxable: true, is_system_defined: false, is_active: true, amount: null },
-          { id: '3', name: 'Provident Fund', type: 'deduction', calculation_type: 'fixed', amount: 1800, is_taxable: false, is_system_defined: true, is_active: true, percentage: null },
-        ]);
-      }, 1000);
-    });
-  };
-
-  const addSalaryComponent = async (component: Omit<SalaryComponent, 'id' | 'is_system_defined' | 'is_active'>): Promise<SalaryComponent> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newComponent: SalaryComponent = {
-          ...component,
-          id: String(Date.now()), // Create a new ID
-          is_system_defined: false,
-          is_active: true
-        };
-        resolve(newComponent);
-      }, 500);
-    });
-  };
-
-  const updateSalaryComponent = async (component: SalaryComponent): Promise<SalaryComponent> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(component); // Return the updated component
-      }, 500);
-    });
-  };
-
-  const deleteSalaryComponent = async (id: string): Promise<void> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(); // Indicate successful deletion
-      }, 500);
-    });
-  };
-  // End of Mock API functions
+  const loadComponents = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchSalaryComponents();
+      setComponents(data);
+    } catch (err) {
+      const apiError = err as { error?: string; message?: string };
+      const errorMessage = apiError?.message || apiError?.error || 'Failed to fetch salary components.';
+      setError(errorMessage);
+      toast({ title: 'Error fetching components', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    const loadComponents = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchSalaryComponents();
-        setComponents(data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to fetch salary components.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadComponents();
-  }, []);
+  }, [loadComponents]);
 
-  const handleAdd = async (newComponentData: Omit<SalaryComponent, 'id' | 'is_system_defined' | 'is_active'>) => {
-    setIsLoading(true);
-    try {
-      const addedComponent = await addSalaryComponent(newComponentData);
-      setComponents([...components, addedComponent]);
-      setError(null);
-    } catch (err) {
-      setError('Failed to add salary component.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleModalOpen = (component?: SalaryComponent) => {
+    setEditingComponent(component || null);
+    setIsModalOpen(true);
   };
 
-  const handleEdit = async (updatedComponent: SalaryComponent) => {
-    setIsLoading(true);
-    try {
-      const returnedComponent = await updateSalaryComponent(updatedComponent);
-      setComponents(
-        components.map((c) => (c.id === returnedComponent.id ? returnedComponent : c))
-      );
-      setError(null);
-    } catch (err) {
-      setError('Failed to update salary component.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingComponent(null);
   };
 
-  const handleToggleActive = async (componentToToggle: SalaryComponent) => {
-    setIsLoading(true);
+  const handleSaveComponent = async (data: SalaryComponentFormData) => {
+    setIsLoading(true); // Consider a more specific saving state, e.g., isSubmitting
     try {
-      const updatedComponent = { ...componentToToggle, is_active: !componentToToggle.is_active };
-      const returnedComponent = await updateSalaryComponent(updatedComponent);
-      setComponents(
-        components.map((c) => (c.id === returnedComponent.id ? returnedComponent : c))
-      );
-      setError(null);
+      if (editingComponent && editingComponent.id) {
+        await updateSalaryComponent(editingComponent.id, data);
+        toast({ title: 'Component Updated', description: `${data.name} has been updated.`, status: 'success', duration: 3000, isClosable: true });
+      } else {
+        await addSalaryComponent(data);
+        toast({ title: 'Component Added', description: `${data.name} has been added.`, status: 'success', duration: 3000, isClosable: true });
+      }
+      await loadComponents(); // Refresh the list
     } catch (err) {
-      setError('Failed to update salary component status.');
-      console.error(err);
+      const apiError = err as { error?: string; message?: string };
+      const errorMessage = apiError?.message || apiError?.error || 'Failed to save component.';
+      setError(errorMessage); // Set error for display on page if needed, toast is primary feedback
+      toast({ title: 'Save Error', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Reset general loading state
+      handleModalClose();
     }
   };
 
   const handleDelete = async (id: string) => {
-    setIsLoading(true);
-    try {
-      await deleteSalaryComponent(id);
-      setComponents(components.filter((c) => c.id !== id));
-      setError(null);
-    } catch (err) {
-      setError('Failed to delete salary component.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+    if (window.confirm('Are you sure you want to delete this salary component?')) {
+      setIsLoading(true); // Indicate loading for delete operation
+      try {
+        await deleteSalaryComponent(id);
+        toast({ title: 'Component Deleted', description: 'Salary component has been deleted.', status: 'success', duration: 3000, isClosable: true });
+        await loadComponents(); // Refresh the list
+      } catch (err) {
+        const apiError = err as { error?: string; message?: string };
+        const errorMessage = apiError?.message || apiError?.error || 'Failed to delete component.';
+        setError(errorMessage);
+        toast({ title: 'Delete Error', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
+        setIsLoading(false); // Ensure loading is false on error too
+      }
+      // setIsLoading(false) will be handled by loadComponents in success case or above in error case
     }
   };
 
-  if (isLoading) {
-    return <Box>Loading...</Box>; // Or a spinner component
-  }
-
-  if (error) {
-    return <Box color="red.500">{error}</Box>; // Display error message
-  }
+  const handleToggleActive = async (component: SalaryComponent) => {
+    setIsLoading(true); // Indicate loading for toggle operation
+    try {
+      await toggleSalaryComponentActive(component);
+      toast({
+        title: 'Status Updated',
+        description: `${component.name} status has been ${component.is_active ? 'deactivated' : 'activated'}.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      await loadComponents(); // Refresh the list
+    } catch (err) {
+      const apiError = err as { error?: string; message?: string };
+      const errorMessage = apiError?.message || apiError?.error || 'Failed to toggle active status.';
+      setError(errorMessage);
+      toast({ title: 'Toggle Error', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
+      setIsLoading(false); // Ensure loading is false on error too
+    }
+  };
 
   return (
     <Box p={5}>
-      <Heading mb={5}>Manage Salary Components</Heading>
-      <SalaryComponentList
-        components={components}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onToggleActive={handleToggleActive} // Add this line
-      />
+      <Flex justifyContent="space-between" alignItems="center" mb={5}>
+        <Heading>Manage Salary Components</Heading>
+        <Button colorScheme="blue" onClick={() => handleModalOpen()}>
+          Add New Component
+        </Button>
+      </Flex>
+
+      {error && (
+        <Alert status="error" mb={4}>
+          <AlertIcon />
+          <Box>
+            <AlertTitle>An Error Occurred!</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Box>
+        </Alert>
+      )}
+
+      {isLoading && components.length === 0 ? ( // Show spinner only if loading and no data yet
+        <Flex justifyContent="center" alignItems="center" height="200px">
+          <Spinner size="xl" />
+        </Flex>
+      ) : (
+        <SalaryComponentList
+          components={components}
+          onEdit={handleModalOpen}
+          onDelete={handleDelete}
+          onToggleActive={handleToggleActive}
+        />
+      )}
+
+      {isModalOpen && (
+        <SalaryComponentModal
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onSave={handleSaveComponent}
+          component={editingComponent || undefined} // Pass undefined if editingComponent is null
+        />
+      )}
     </Box>
   );
 };
