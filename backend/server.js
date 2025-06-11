@@ -305,6 +305,15 @@ app.post('/api/employees/:employeeId/dependents', authenticateAndAttachUser, asy
     try {
         const { tenantId } = req.user;
         const { employeeId } = req.params;
+
+        // Define UUID validation regular expression
+        const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+
+        // Validate employeeId format
+        if (!UUID_REGEX.test(employeeId)) {
+            return res.status(400).json({ error: 'Invalid employee ID format. Please provide a valid UUID.' });
+        }
+
         const { full_name, relationship, date_of_birth, is_fiscally_dependent, effective_start_date, notes } = req.body;
 
         // Basic validation
