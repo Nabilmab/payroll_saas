@@ -3,7 +3,12 @@ const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class PayslipItem extends Model {
-    // No associate method as per request
+    static associate(models) {
+      // define association here
+      PayslipItem.belongsTo(models.SalaryComponent, { foreignKey: 'salaryComponentId', as: 'salaryComponent' });
+      PayslipItem.belongsTo(models.Payslip, { foreignKey: 'payslipId', as: 'payslip' });
+      PayslipItem.belongsTo(models.Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+    }
   }
 
   PayslipItem.init({
@@ -16,19 +21,27 @@ module.exports = (sequelize, DataTypes) => {
     // Essential foreign keys for context
     tenantId: {
       type: DataTypes.UUID,
-      allowNull: false,
-      // references: { model: 'tenants', key: 'id' }, // No associations
+      allowNull: false, // Assuming payslip items must be tied to a tenant
+      references: {
+          model: 'tenants', // Name of the Tenant table
+          key: 'id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE', // Or 'RESTRICT' based on desired behavior
     },
     payslipId: {
       type: DataTypes.UUID,
       allowNull: false,
       // references: { model: 'payslips', key: 'id' }, // No associations
     },
-    // salaryComponentId: { // Would normally link to SalaryComponent model
-    //   type: DataTypes.UUID,
-    //   allowNull: true, // Or false if every item must be from a predefined component
-    //   // references: { model: 'salary_components', key: 'id' }, // No associations
-    // },
+    salaryComponentId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'salary_components', // Name of the target table
+        key: 'id',                  // Key in the target table that we're referencing
+      },
+    },
     description: { // e.g., "Basic Salary", "Income Tax", "Health Insurance Premium"
       type: DataTypes.STRING,
       allowNull: false,
@@ -55,9 +68,9 @@ module.exports = (sequelize, DataTypes) => {
     // If a payslip is soft-deleted, its items effectively are too via FK relationship (when active).
     underscored: true, // For snake_case column names
     indexes: [
-      // { fields: ['tenant_id'] }, // Add back if associations are restored
-      // { fields: ['payslip_id'] }, // Add back if associations are restored
-      // { fields: ['salary_component_id'] }, // Add back if associations are restored
+      { fields: ['tenant_id'] }, // Add back if associations are restored
+      { fields: ['payslip_id'] }, // Add back if associations are restored
+      { fields: ['salary_component_id'] }, // Add back if associations are restored
     ]
     // No specific unique indexes here by default, as a payslip can have multiple items of the same type
     // (e.g., multiple "other" earnings or deductions with different descriptions).

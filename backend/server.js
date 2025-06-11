@@ -5,7 +5,7 @@ const { sequelize } = require('./models'); // We only need sequelize to test con
 const { Op } = require('sequelize');
 
 // CORRECTED: Import ALL models you'll need for your routes
-const { User, Role, Employee, Department, SalaryComponent } = require('./models');
+const { User, Role, Employee, Department, SalaryComponent, Payslip, PayrollRun, PayslipItem, EmployeeDependent } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -430,6 +430,117 @@ app.delete('/api/dependents/:dependentId', authenticateAndAttachUser, async (req
         res.status(500).json({ error: 'Failed to delete employee dependent.' });
     }
 });
+
+// --- YTD SUMMARY ROUTE ---
+app.get('/api/employees/:employeeId/ytd-summary', authenticateAndAttachUser, async (req, res) => {
+  try {
+    const { tenantId } = req.user;
+    const { employeeId } = req.params;
+    const { periodEndDate } = req.query;
+
+    if (!periodEndDate) {
+      return res.status(400).json({ error: 'periodEndDate query parameter is required.' });
+    }
+
+    const targetPeriodEndDate = new Date(periodEndDate);
+    if (isNaN(targetPeriodEndDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid periodEndDate format.' });
+    }
+
+    const firstDayOfYear = new Date(targetPeriodEndDate.getFullYear(), 0, 1);
+
+    // Validate employee existence and access
+    const employee = await Employee.findOne({
+      where: { id: employeeId, tenantId: tenantId }
+    });
+
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found or access denied.' });
+    }
+
+    const payslipsInYear = await Payslip.findAll({
+      where: {
+        employeeId: employeeId,
+        tenantId: tenantId,
+      },
+      include: [
+        {
+          model: PayrollRun,
+          as: 'payrollRun',
+          where: {
+            periodEnd: {
+              [Op.gte]: firstDayOfYear,
+              [Op.lte]: targetPeriodEndDate,
+            },
+            status: {
+              [Op.in]: ['paid', 'approved', 'completed'], // As per typical completed statuses
+            },
+          },
+          required: true, // Ensures only payslips with matching payroll runs are returned
+        },
+        {
+          model: PayslipItem,
+          as: 'payslipItems',
+          include: [
+            {
+              model: SalaryComponent,
+              as: 'salaryComponent', // Ensure this alias matches the model definition
+              attributes: ['component_code'], // Only fetch component_code
+            },
+          ],
+        },
+      ],
+      order: [['createdAt', 'ASC']], // Or based on payrollRun.periodEnd
+    });
+
+    const ytdSummary = {
+      grossPay: 0,
+      netPay: 0,
+      totalDeductions: 0, // Non-tax deductions
+      totalTaxes: 0,
+      items: {}, // To store aggregated amounts for each component_code or description
+    };
+
+    for (const payslip of payslipsInYear) {
+      ytdSummary.grossPay += parseFloat(payslip.grossPay);
+      ytdSummary.netPay += parseFloat(payslip.netPay);
+      ytdSummary.totalDeductions += parseFloat(payslip.deductions);
+      ytdSummary.totalTaxes += parseFloat(payslip.taxes);
+
+      for (const item of payslip.payslipItems) {
+        const itemAmount = parseFloat(item.amount);
+        // Use component_code if available (from SalaryComponent), otherwise fall back to item.description
+        const key = item.salaryComponent?.component_code || item.description || 'unknown_item';
+
+        if (!ytdSummary.items[key]) {
+          ytdSummary.items[key] = {
+            description: item.description, // Store original description for clarity
+            type: item.type, // Store item type
+            amount: 0,
+          };
+        }
+        ytdSummary.items[key].amount += itemAmount;
+      }
+    }
+
+    // Round all monetary values to two decimal places
+    ytdSummary.grossPay = parseFloat(ytdSummary.grossPay.toFixed(2));
+    ytdSummary.netPay = parseFloat(ytdSummary.netPay.toFixed(2));
+    ytdSummary.totalDeductions = parseFloat(ytdSummary.totalDeductions.toFixed(2));
+    ytdSummary.totalTaxes = parseFloat(ytdSummary.totalTaxes.toFixed(2));
+
+    for (const key in ytdSummary.items) {
+      ytdSummary.items[key].amount = parseFloat(ytdSummary.items[key].amount.toFixed(2));
+    }
+
+    res.json(ytdSummary);
+
+  } catch (error) {
+    console.error('Error fetching YTD summary:', error);
+    res.status(500).json({ error: 'An internal server error occurred while fetching YTD summary.' });
+  }
+});
+
 
 // --- Start the Server ---
 const startServer = async () => {

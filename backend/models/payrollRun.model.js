@@ -10,6 +10,10 @@ module.exports = (sequelize, DataTypes) => {
      * Content is commented out as per request.
      */
     static associate(models) {
+      PayrollRun.hasMany(models.Payslip, {
+        foreignKey: 'payrollRunId',
+        as: 'payslips',
+      });
       // PayrollRun.belongsTo(models.Tenant, {
       //   foreignKey: 'tenantId',
       //   as: 'tenant',
@@ -29,10 +33,6 @@ module.exports = (sequelize, DataTypes) => {
       //   foreignKey: 'approvedByUserId',
       //   as: 'approvedByUser',
       //   allowNull: true,
-      // });
-      // PayrollRun.hasMany(models.PayrollItem, { // Or models.Payslip
-      //   foreignKey: 'payrollRunId',
-      //   as: 'payrollItems', // Or payslips
       // });
     }
   }
