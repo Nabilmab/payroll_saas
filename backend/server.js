@@ -613,6 +613,34 @@ app.get('/api/payslips/:payslipId', authenticateAndAttachUser, async (req, res) 
             ]
         });
 
+        // ADD LOGGING BLOCK HERE:
+        if (payslip) {
+            console.log(`[API GET /api/payslips/:payslipId] Fetched payslip object (raw):`, payslip); // Log raw Sequelize object
+            try {
+                console.log(`[API GET /api/payslips/:payslipId] Fetched payslip object (toJSON):`, payslip.toJSON());
+            } catch (e) {
+                console.error(`[API GET /api/payslips/:payslipId] Error calling toJSON() on payslip object:`, e);
+            }
+
+            if (payslip.payslipItems && Array.isArray(payslip.payslipItems)) {
+                console.log(`[API GET /api/payslips/:payslipId] payslip.payslipItems is DEFINED on server. Length: ${payslip.payslipItems.length}`);
+                payslip.payslipItems.forEach((item, index) => {
+                    try {
+                        console.log(`[API GET /api/payslips/:payslipId] Item ${index} (toJSON):`, item.toJSON());
+                    } catch(e) {
+                         console.error(`[API GET /api/payslips/:payslipId] Error calling toJSON() on item ${index}:`, e);
+                         console.log(`[API GET /api/payslips/:payslipId] Item ${index} (raw):`, item);
+                    }
+                });
+            } else if (payslip.payslipItems) {
+                console.log(`[API GET /api/payslips/:payslipId] payslip.payslipItems is DEFINED but NOT AN ARRAY. Value:`, payslip.payslipItems);
+            } else {
+                console.log(`[API GET /api/payslips/:payslipId] payslip.payslipItems is UNDEFINED or NULL on server, but payslip object exists.`);
+            }
+        } else {
+            console.log(`[API GET /api/payslips/:payslipId] Payslip object itself is null/undefined on server for ID: ${payslipId}`);
+        }
+
         if (!payslip) {
             return res.status(404).json({ error: 'Payslip not found or access denied.' });
         }
