@@ -378,15 +378,22 @@ async function seedSalaryComponents() {
         tenantId: tenant.id,
         type: scData.type,
         calculation_type: scData.calculation_type,
-        amount: scData.amount || null,
-        percentage: scData.percentage || null,
         is_taxable: scData.is_taxable,
-        // New fields added here
         component_code: scData.component_code || null,
         is_cnss_subject: typeof scData.is_cnss_subject === 'boolean' ? scData.is_cnss_subject : false,
         is_amo_subject: typeof scData.is_amo_subject === 'boolean' ? scData.is_amo_subject : false,
-        payslip_display_order: scData.payslip_display_order || null
+        payslip_display_order: scData.payslip_display_order || null,
+        // Conditional amount and percentage
+        amount: null, // Initialize as null
+        percentage: null // Initialize as null
     };
+
+    if (scData.calculation_type === 'fixed') {
+        defaults.amount = scData.amount || null; // Use scData.amount, fallback to null if undefined/zero
+    } else if (scData.calculation_type === 'percentage') {
+        defaults.percentage = scData.percentage || null; // Use scData.percentage, fallback to null if undefined/zero
+    }
+    // For 'formula', both will remain null as initialized
 
     const [component, created] = await SalaryComponent.findOrCreate({
       where: {
