@@ -588,10 +588,10 @@ describe('Payroll SaaS API Integration Tests', () => {
             expect(response.body).toHaveProperty('id', payslipApiTestPayslipId);
             expect(response.body).toHaveProperty('employeeId', ahmedBennaniEmployeeId);
             expect(response.body).toHaveProperty('tenantId', techSolutionsTenantId);
-            expect(response.body).toHaveProperty('grossPay', 7500.00);  // Adjusted
-            expect(response.body).toHaveProperty('deductions', 505.50); // Adjusted
-            expect(response.body).toHaveProperty('taxes', 1200.00);    // Adjusted
-            expect(response.body).toHaveProperty('netPay', 5794.50);   // Adjusted
+            expect(response.body).toHaveProperty('grossPay', "7500.00");  // Expect String
+            expect(response.body).toHaveProperty('deductions', "505.50"); // Expect String
+            expect(response.body).toHaveProperty('taxes', "1200.00");    // Expect String
+            expect(response.body).toHaveProperty('netPay', "5794.50");   // Expect String
 
             expect(response.body.items).toBeDefined();
             expect(Array.isArray(response.body.items)).toBe(true);
@@ -599,17 +599,17 @@ describe('Payroll SaaS API Integration Tests', () => {
 
             const baseSalaryItem = response.body.items.find(item => item.description === "Salaire de Base (Suite Test Payslip Mars)");
             expect(baseSalaryItem).toBeDefined();
-            expect(baseSalaryItem.amount).toBe(7500.00);
+            expect(baseSalaryItem.amount).toBe("7500.00"); // Expect String
             expect(baseSalaryItem.salaryComponent.id).toBe(baseSalaryComponentId);
 
             const cnssItem = response.body.items.find(item => item.description === "Cotisation CNSS (Suite Test Payslip Mars)");
             expect(cnssItem).toBeDefined();
-            expect(cnssItem.amount).toBe(505.50);
+            expect(cnssItem.amount).toBe("505.50"); // Expect String
             expect(cnssItem.salaryComponent.id).toBe(cnssComponentId);
 
             const igrItem = response.body.items.find(item => item.description === "IGR (Suite Test Payslip Mars)");
             expect(igrItem).toBeDefined();
-            expect(igrItem.amount).toBe(1200.00);
+            expect(igrItem.amount).toBe("1200.00"); // Expect String
             expect(igrItem.salaryComponent.id).toBe(igrComponentId);
         });
 
@@ -625,7 +625,10 @@ describe('Payroll SaaS API Integration Tests', () => {
 
             const foundPayslip = response.body.find(p => p.id === payslipApiTestPayslipId); // Check for specific payslip
             expect(foundPayslip).toBeDefined(); // Ensure the payslip from this suite is present
-            expect(foundPayslip.grossPay).toBe(7500.00);
+            expect(foundPayslip.grossPay).toBe("7500.00"); // Expect String
+            expect(foundPayslip.deductions).toBe("505.50"); // Expect String
+            expect(foundPayslip.taxes).toBe("1200.00");    // Expect String
+            expect(foundPayslip.netPay).toBe("5794.50");   // Expect String
             expect(foundPayslip.payrollRun).toBeDefined();
             expect(foundPayslip.payrollRun.id).toBe(payslipApiTestPayrollRunId);
             const periodEndDate = new Date(foundPayslip.payrollRun.periodEnd).toISOString().split('T')[0];
