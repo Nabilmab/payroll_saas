@@ -60,29 +60,34 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
               </Td>
               <Td>{component.is_taxable ? 'Yes' : 'No'}</Td>
               <Td>
-                {!component.is_system_defined ? (
-                  <Switch
-                    id={`active-switch-${component.id}`}
-                    isChecked={component.is_active}
-                    onChange={() => onToggleActive(component)}
-                    colorScheme="green"
-                  />
-                ) : (
-                  component.is_active ? 'Yes' : 'No'
-                )}
+                <Switch
+                  id={`active-switch-${component.id}`}
+                  isChecked={component.is_active}
+                  onChange={() => onToggleActive(component)}
+                  colorScheme="green"
+                  isDisabled={component.is_system_defined}
+                />
               </Td>
               <Td>{component.is_system_defined ? 'System' : 'Custom'}</Td>
               <Td>
-                {!component.is_system_defined && (
-                  <Box display="flex" gap={2}>
-                    <Button size="sm" colorScheme="blue" onClick={() => onEdit(component)}>
-                      Edit
-                    </Button>
-                    <Button size="sm" colorScheme="red" onClick={() => onDelete(component.id)}>
-                      Delete
-                    </Button>
-                  </Box>
-                )}
+                <Box display="flex" gap={2}>
+                  <Button
+                    size="sm"
+                    colorScheme="blue"
+                    onClick={() => onEdit(component)}
+                    isDisabled={component.is_system_defined}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    colorScheme="red"
+                    onClick={() => onDelete(component.id)}
+                    isDisabled={component.is_system_defined}
+                  >
+                    Delete
+                  </Button>
+                </Box>
               </Td>
             </Tr>
           ))}
