@@ -69,6 +69,7 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'tenant_id', // ensure DB column is correctly mapped
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
@@ -144,21 +145,35 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
     },
     // Add other employee-specific fields like address, salary info (could be in a separate model), etc.
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      field: 'deleted_at',
+    },
   }, {
     sequelize,
     modelName: 'Employee',
     tableName: 'employees',
     timestamps: true,
     paranoid: true, // Soft deletes for employee records
-    underscored: true,
+    // underscored: true, // REMOVED
     // Model attribute names (camelCase) are used in `fields` and `where` clauses.
     // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
-      { fields: ['tenantId'] },
-      { fields: ['departmentId'] },
-      { fields: ['userId'] },
-      { unique: true, fields: ['tenantId', 'email'],  name: 'unique_tenant_employee_email',  where: { email: { [Op.ne]: null } } },
-      { unique: true, fields: ['tenantId', 'employeeIdAlt'], name: 'unique_tenant_employee_id_alt', where: { employeeIdAlt: { [Op.ne]: null } } }
+      { name: 'employees_tenant_id_idx', fields: ['tenant_id'] }, // Updated
+      { fields: ['departmentId'] }, // This one remains as is, assuming departmentId is correctly handled or will be addressed separately if needed.
+      { fields: ['userId'] }, // This one remains as is.
+      { unique: true, fields: ['tenant_id', 'email'], name: 'unique_tenant_employee_email', where: { email: { [Op.ne]: null } } }, // Updated
+      { unique: true, fields: ['tenant_id', 'employeeIdAlt'], name: 'unique_tenant_employee_id_alt', where: { employeeIdAlt: { [Op.ne]: null } } } // Updated
     ]
   });
 
