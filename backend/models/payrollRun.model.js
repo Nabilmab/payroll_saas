@@ -14,26 +14,26 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'payrollRunId',
         as: 'payslips',
       });
-      // PayrollRun.belongsTo(models.Tenant, {
-      //   foreignKey: 'tenantId',
-      //   as: 'tenant',
-      //   allowNull: false,
-      // });
-      // PayrollRun.belongsTo(models.PaySchedule, {
-      //   foreignKey: 'payScheduleId',
-      //   as: 'paySchedule',
-      //   allowNull: false,
-      // });
-      // PayrollRun.belongsTo(models.User, {
-      //   foreignKey: 'processedByUserId',
-      //   as: 'processedByUser',
-      //   allowNull: true,
-      // });
-      // PayrollRun.belongsTo(models.User, {
-      //   foreignKey: 'approvedByUserId',
-      //   as: 'approvedByUser',
-      //   allowNull: true,
-      // });
+      PayrollRun.belongsTo(models.Tenant, {
+        foreignKey: 'tenantId',
+        as: 'tenant',
+        allowNull: false,
+      });
+      PayrollRun.belongsTo(models.PaySchedule, {
+        foreignKey: 'payScheduleId',
+        as: 'paySchedule',
+        allowNull: false,
+      });
+      PayrollRun.belongsTo(models.User, {
+        foreignKey: 'processedByUserId',
+        as: 'processedByUser',
+        allowNull: true,
+      });
+      PayrollRun.belongsTo(models.User, {
+        foreignKey: 'approvedByUserId',
+        as: 'approvedByUser',
+        allowNull: true,
+      });
     }
   }
 
@@ -48,14 +48,14 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'tenants', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'CASCADE',
+      references: { model: 'tenants', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
     payScheduleId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'pay_schedules', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'RESTRICT',
+      references: { model: 'pay_schedules', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'RESTRICT',
     },
     periodStart: { // Renamed from pay_period_start_date
       type: DataTypes.DATEONLY,
@@ -102,14 +102,14 @@ module.exports = (sequelize, DataTypes) => {
     processedByUserId: {
       type: DataTypes.UUID,
       allowNull: true,
-      // references: { model: 'users', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'SET NULL',
+      references: { model: 'users', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
     approvedByUserId: {
       type: DataTypes.UUID,
       allowNull: true,
-      // references: { model: 'users', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'SET NULL',
+      references: { model: 'users', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
     processedAt: { // Renamed from processed_at
       type: DataTypes.DATE,
@@ -129,17 +129,17 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payroll_runs', // Keeping original table name
     timestamps: true,
     paranoid: true,
-    underscored: true, // Ensuring this is active for snake_case column names
+underscored: true, // This is correct, it maps JS camelCase to DB snake_case
     indexes: [
-      // { fields: ['tenantId'] }, // Model attribute, maps to tenant_id if associations restored
-      // { fields: ['payScheduleId'] }, // Model attribute, maps to pay_schedule_id if associations restored
-      { fields: ['status'] }, // Model attribute, maps to status
-      { fields: ['paymentDate'] }, // Model attribute, maps to payment_date
+      // Sequelize will correctly map these camelCase fields to snake_case for the index creation
+      { fields: ['tenantId'] },
+      { fields: ['payScheduleId'] },
+      { fields: ['status'] },
+      { fields: ['paymentDate'] },
       {
         unique: true,
-        // Model attributes, will be mapped to snake_case for DB index creation by `underscored: true`
         fields: ['tenantId', 'payScheduleId', 'periodEnd', 'status'],
-        name: 'unique_tenant_schedule_period_run' // Constraint name in DB
+        name: 'unique_tenant_schedule_period_run'
       }
     ]
   });
