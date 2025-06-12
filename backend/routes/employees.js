@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 // Updated import statement as per user feedback
 const { Employee, Department, EmployeeDependent } = require('../models');
-const auth = require('../middleware/auth');
+// Removed: const auth = require('../middleware/auth');
 const { check, validationResult } = require('express-validator');
 
 // @route   POST api/employees
@@ -11,7 +11,7 @@ const { check, validationResult } = require('express-validator');
 router.post(
   '/',
   [
-    auth,
+    // auth, // Removed auth from route handler
     [
       check('name', 'Name is required').not().isEmpty(),
       check('email', 'Please include a valid email').isEmail(),
@@ -49,7 +49,7 @@ router.post(
 // @route   GET api/employees
 // @desc    Get all employees
 // @access  Private
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => { // Removed auth from route handler
   try {
     const employees = await Employee.find({ user: req.user.id }).sort({
       date: -1,
@@ -64,7 +64,7 @@ router.get('/', auth, async (req, res) => {
 // @route   PUT api/employees/:id
 // @desc    Update employee
 // @access  Private
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', async (req, res) => { // Removed auth from route handler
   const { name, email, position, department, salary } = req.body;
 
   // Build employee object
@@ -101,7 +101,7 @@ router.put('/:id', auth, async (req, res) => {
 // @route   DELETE api/employees/:id
 // @desc    Delete employee
 // @access  Private
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => { // Removed auth from route handler
   try {
     let employee = await Employee.findById(req.params.id);
 

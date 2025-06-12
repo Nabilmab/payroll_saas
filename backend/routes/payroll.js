@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { Employee, Payslip, PayrollRun, PayslipItem, SalaryComponent, sequelize } = require('../models');
-const auth = require('../middleware/auth'); // Assuming auth middleware is correctly set up for Sequelize user
+// Removed: const auth = require('../middleware/auth');
 const { check, validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
 // @route   GET /api/payslips/:payslipId (Note: Mounted under /api in server.js, so actual path is /api/payslips/:payslipId)
 // @desc    Get single payslip record
 // @access  Private
-router.get('/payslips/:payslipId', auth, async (req, res) => {
+router.get('/payslips/:payslipId', async (req, res) => { // Removed auth from route handler
   try {
     // Validate payslipId format if necessary (e.g., isUUID)
     // const errors = validationResult(req);
@@ -64,7 +64,7 @@ router.get('/payslips/:payslipId', auth, async (req, res) => {
 // @route   GET /api/employees/:employeeId/payslips (Mounted under /api, so actual path is /api/employees/:employeeId/payslips)
 // @desc    Get all payslip records for an employee
 // @access  Private
-router.get('/employees/:employeeId/payslips', auth, async (req, res) => {
+router.get('/employees/:employeeId/payslips', async (req, res) => { // Removed auth from route handler
   try {
     // Validate employeeId
     // const errors = validationResult(req);
@@ -107,7 +107,7 @@ router.get('/employees/:employeeId/payslips', auth, async (req, res) => {
 // @route   GET /api/employees/:employeeId/ytd-summary (Mounted under /api)
 // @desc    Get Year-to-Date payroll summary for an employee
 // @access  Private
-router.get('/employees/:employeeId/ytd-summary', auth, [
+router.get('/employees/:employeeId/ytd-summary', [ // Removed auth from route handler
   check('periodEndDate', 'periodEndDate query parameter is required and should be a valid date string.').isISO8601().toDate()
 ], async (req, res) => {
   const errors = validationResult(req);
