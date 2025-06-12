@@ -40,6 +40,7 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'tenant_id', // Added mapping
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
@@ -85,6 +86,20 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true,
       allowNull: false,
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      field: 'deleted_at',
+    },
     // next_pay_date: { // Could be a calculated field or stored and updated
     //   type: DataTypes.DATEONLY,
     //   allowNull: true,
@@ -95,10 +110,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'pay_schedules',
     timestamps: true,
     paranoid: true,
-    underscored: true,
+    // underscored: true, // REMOVED
     indexes: [
-      { fields: ['tenantId'] }, // Model attribute name, will be mapped to snake_case by underscored: true
-      { unique: true, fields: ['tenantId', 'name'], name: 'unique_tenant_payschedule_name' } // Model attribute names, will be mapped to snake_case by underscored: true
+      { name: 'pay_schedules_tenant_id_idx', fields: ['tenant_id'] }, // Updated
+      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_payschedule_name' } // Updated
     ]
   });
 
