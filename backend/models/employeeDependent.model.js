@@ -79,10 +79,10 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true, // Soft delete for historical records
     underscored: true,
     indexes: [
-      { fields: ['tenant_id'] }, // DB column name
-      { fields: ['employee_id'] }, // DB column name
+      { fields: ['tenantId'] }, // DB column name
+      { fields: ['employeeId'] }, // DB column name
       // DB column names, mapping from model attributes (fullName, dateOfBirth) handled by underscored: true
-      { fields: ['employee_id', 'full_name', 'date_of_birth'], unique: true, name: 'unique_employee_dependent_profile' }
+      { fields: ['employeeId', 'fullName', 'dateOfBirth'], unique: true, name: 'unique_employee_dependent_profile' }
     ]
   });
 
