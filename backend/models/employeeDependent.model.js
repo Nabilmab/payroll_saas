@@ -79,9 +79,9 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true, // Soft delete for historical records
     underscored: true,
     indexes: [
-      { fields: ['tenantId'] }, // DB column name
-      { fields: ['employeeId'] }, // DB column name
-      // DB column names, mapping from model attributes (fullName, dateOfBirth) handled by underscored: true
+      { fields: ['tenantId'] }, // Model attribute name, will be mapped to snake_case by underscored: true
+      { fields: ['employeeId'] }, // Model attribute name, will be mapped to snake_case by underscored: true
+      // Model attribute names, will be mapped to snake_case by underscored: true
       { fields: ['employeeId', 'fullName', 'dateOfBirth'], unique: true, name: 'unique_employee_dependent_profile' }
     ]
   });

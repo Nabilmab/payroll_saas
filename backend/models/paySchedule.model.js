@@ -97,8 +97,8 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true,
     underscored: true,
     indexes: [
-      { fields: ['tenant_id'] }, // DB column name, mapping from tenantId attribute handled by underscored: true
-      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_payschedule_name' } // Same here
+      { fields: ['tenantId'] }, // Model attribute name, will be mapped to snake_case by underscored: true
+      { unique: true, fields: ['tenantId', 'name'], name: 'unique_tenant_payschedule_name' } // Model attribute names, will be mapped to snake_case by underscored: true
     ]
   });
 
