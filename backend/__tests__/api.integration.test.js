@@ -55,12 +55,19 @@ describe('Payroll SaaS API Integration Tests', () => {
         await sequelize.sync({ force: true });
 
         // Seed data
-        const tenant = await Tenant.create({ name: "TechSolutions Inc.", country: "MA", schemaName: "techsolutions_inc" });
+        const tenant = await Tenant.create({ name: "TechSolutions Inc.", country: "MA", schemaName: "techsolutions" });
         techSolutionsTenantId = tenant.id;
         mockUser.tenantId = tenant.id; // Align mock user with the created tenant
 
         const rhDepartment = await Department.create({ name: "Ressources Humaines", tenantId: techSolutionsTenantId });
         const itDepartment = await Department.create({ name: "Technologie de l'Information", tenantId: techSolutionsTenantId });
+
+    const monthlySchedule = await PaySchedule.create({
+        name: "Mensuel",
+        frequency: "monthly",
+        effectiveDate: new Date(),
+        tenantId: techSolutionsTenantId
+    });
 
         const ahmed = await Employee.create({
             firstName: "Ahmed",
@@ -68,14 +75,15 @@ describe('Payroll SaaS API Integration Tests', () => {
             email: "ahmed.bennani@techsolutions.ma",
             jobTitle: "Développeur Principal",
             departmentId: itDepartment.id,
-            tenantId: techSolutionsTenantId
+            tenantId: techSolutionsTenantId,
+            payScheduleId: monthlySchedule.id
             // Note: payScheduleId might be needed here if present in Employee model
         });
         ahmedBennaniEmployeeId = ahmed.id;
 
         const khalid = await EmployeeDependent.create({
             fullName: "Khalid Bennani",
-            relationship: "Fils",
+            relationship: "child",
             dateOfBirth: "2010-05-15",
             isFiscallyDependent: true,
             effectiveStartDate: new Date(), // Corrected from effective_start_date
@@ -91,6 +99,7 @@ describe('Payroll SaaS API Integration Tests', () => {
           paymentDate: '2023-02-05',
           status: 'paid',
           tenantId: techSolutionsTenantId,
+          payScheduleId: monthlySchedule.id
         });
 
         const payslip = await Payslip.create({
@@ -117,7 +126,7 @@ describe('Payroll SaaS API Integration Tests', () => {
         it('POST /api/employees/:employeeId/dependents - should create a new dependent successfully', async () => {
              const newDependentPayload = {
                 fullName: "Fatima Bennani",
-                relationship: "Fille",
+                relationship: "child",
                 dateOfBirth: "2012-08-20",
                 isFiscallyDependent: true
                 // Note: effectiveStartDate might be relevant here if required by model/controller
