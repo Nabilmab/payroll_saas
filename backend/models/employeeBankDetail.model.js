@@ -31,6 +31,7 @@ module.exports = (sequelize, DataTypes) => {
     employeeId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'employee_id', // Added mapping
       references: {
         model: 'employees', // Name of the Employee table
         key: 'id',
@@ -84,17 +85,31 @@ module.exports = (sequelize, DataTypes) => {
     //   type: DataTypes.ENUM('pending', 'verified', 'failed'),
     //   defaultValue: 'pending',
     // }
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      field: 'deleted_at',
+    },
   }, {
     sequelize,
     modelName: 'EmployeeBankDetail',
     tableName: 'employee_bank_details',
     timestamps: true,
     paranoid: true, // Soft delete might be required for audit trails
-    underscored: true,
+    // underscored: true, // REMOVED
     // Model attribute `employeeId` (camelCase) will be mapped to `employee_id` (snake_case)
     // in the DB due to `underscored: true`.
     indexes: [
-      { fields: ['employeeId'] },
+      { name: 'employee_bank_details_employee_id', fields: ['employee_id'] } // Updated
       // An employee might have multiple bank accounts, so employeeId is not unique here alone.
       // A combination of employeeId and accountNumber (if decrypted) might be unique,
       // but enforcing uniqueness on encrypted data is tricky at DB level.
