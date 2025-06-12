@@ -37,18 +37,21 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'tenant_id',
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
     employeeId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'employee_id',
       references: { model: 'employees', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
     salaryComponentId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'salary_component_id',
       references: { model: 'salary_components', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE', // Or RESTRICT if components shouldn't be deleted if in use
     },

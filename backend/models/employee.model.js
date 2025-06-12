@@ -69,12 +69,14 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'tenant_id',
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
     departmentId: {
       type: DataTypes.UUID,
       allowNull: true, // Or false, depending on business rules
+      field: 'department_id',
       references: { model: 'departments', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'SET NULL', // Or 'RESTRICT'
     },
@@ -82,6 +84,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true,
       unique: true, // One user account per employee
+      field: 'user_id',
       references: { model: 'users', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
@@ -136,6 +139,7 @@ module.exports = (sequelize, DataTypes) => {
     reportingManagerId: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'reporting_manager_id',
       references: {
         model: 'employees', // Table name for Employee model
         key: 'id',
