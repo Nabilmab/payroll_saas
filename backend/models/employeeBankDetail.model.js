@@ -31,7 +31,6 @@ module.exports = (sequelize, DataTypes) => {
     employeeId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'employee_id',
       references: {
         model: 'employees', // Name of the Employee table
         key: 'id',

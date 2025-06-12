@@ -40,7 +40,6 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'tenant_id',
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',

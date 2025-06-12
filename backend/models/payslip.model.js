@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       Payslip.belongsTo(models.PayrollRun, { foreignKey: 'payrollRunId', as: 'payrollRun' });
       Payslip.hasMany(models.PayslipItem, { foreignKey: 'payslipId', as: 'payslipItems' });
       Payslip.belongsTo(models.Employee, { foreignKey: 'employeeId', as: 'employee' }); // Added Employee association
-      // Payslip.belongsTo(models.Tenant, { foreignKey: 'tenantId', as: 'tenant' }); // Example for future
+      Payslip.belongsTo(models.Tenant, { foreignKey: 'tenantId', as: 'tenant' });
     }
   }
 
@@ -23,17 +23,23 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'tenants', key: 'id' }, // No associations
+      references: { model: 'tenants', key: 'id' },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE', // If a tenant is deleted, their payslips are also deleted
     },
     employeeId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'employees', key: 'id' }, // No associations
+      references: { model: 'employees', key: 'id' },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT', // Prevent deleting an employee if payslips exist
     },
     payrollRunId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'payroll_runs', key: 'id' }, // No associations
+      references: { model: 'payroll_runs', key: 'id' },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT', // Prevent deleting a payroll run if payslips exist
     },
     grossPay: {
       type: DataTypes.DECIMAL(12, 2), // Precision 12, 2 decimal places
@@ -77,16 +83,16 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payslips',
     timestamps: true, // createdAt, updatedAt
     paranoid: true,   // For soft deletes, if payslip history needs to be robustly kept
-    // underscored: true, // Removed for camelCase consistency
+    underscored: true,
     indexes: [
-      // { fields: ['tenantId'] }, // Updated for camelCase if associations restored
-      // { fields: ['employeeId'] }, // Updated for camelCase if associations restored
-      { fields: ['payrollRunId'] }, // Updated to camelCase
+      { fields: ['tenant_id'] },
+      { fields: ['employee_id'] },
+      { fields: ['payroll_run_id'] },
       // A payslip should be unique per employee per payroll run
       {
         unique: true,
-        fields: ['employeeId', 'payrollRunId'], // Updated to camelCase
-        name: 'unique_employee_payslip_for_run' // Name can remain snake_case
+        fields: ['employee_id', 'payroll_run_id'],
+        name: 'unique_employee_payslip_for_run'
       }
     ]
   });

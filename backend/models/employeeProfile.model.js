@@ -29,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
       unique: true, // Crucial for a one-to-one relationship
-      field: 'employee_id',
       references: {
         model: 'employees', // Name of the Employee table
         key: 'id',
