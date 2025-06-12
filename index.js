@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: './backend/.env' });
 
 // We will create this 'db' object in the next steps. It will contain all our models.
 const db = require('./models');

@@ -1,6 +1,6 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 const express = require('express');
 const path = require('path');
-require('dotenv').config();
 // User model removed, sequelize kept. Auth middleware imported.
 const { sequelize } = require('./models');
 const { authenticateAndAttachUser } = require('./middleware/auth');
