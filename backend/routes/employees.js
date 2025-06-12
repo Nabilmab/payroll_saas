@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Employee = require('../models/Employee');
+// Updated import statement as per user feedback
+const { Employee, Department, EmployeeDependent } = require('../models');
 const auth = require('../middleware/auth');
 const { check, validationResult } = require('express-validator');
 

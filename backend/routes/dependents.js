@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Dependent = require('../models/Dependent');
-const Employee = require('../models/Employee');
+// Updated import statement as per user feedback
+const { Employee, EmployeeDependent } = require('../models');
 const auth = require('../middleware/auth');
 const { check, validationResult } = require('express-validator');
 
@@ -37,7 +37,7 @@ router.post(
         return res.status(401).json({ msg: 'Not authorized' });
       }
 
-      const newDependent = new Dependent({
+      const newDependent = new EmployeeDependent({ // Changed Dependent to EmployeeDependent
         name,
         relationship,
         dateOfBirth,
@@ -69,7 +69,7 @@ router.get('/employee/:employeeId', auth, async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    const dependents = await Dependent.find({
+    const dependents = await EmployeeDependent.find({ // Changed Dependent to EmployeeDependent
       employee: req.params.employeeId,
     }).sort({
       date: -1,
@@ -94,7 +94,7 @@ router.put('/:id', auth, async (req, res) => {
   if (dateOfBirth) dependentFields.dateOfBirth = dateOfBirth;
 
   try {
-    let dependent = await Dependent.findById(req.params.id);
+    let dependent = await EmployeeDependent.findById(req.params.id); // Changed Dependent to EmployeeDependent
 
     if (!dependent) return res.status(404).json({ msg: 'Dependent not found' });
 
@@ -103,7 +103,7 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    dependent = await Dependent.findByIdAndUpdate(
+    dependent = await EmployeeDependent.findByIdAndUpdate( // Changed Dependent to EmployeeDependent
       req.params.id,
       { $set: dependentFields },
       { new: true }
@@ -121,7 +121,7 @@ router.put('/:id', auth, async (req, res) => {
 // @access  Private
 router.delete('/:id', auth, async (req, res) => {
   try {
-    let dependent = await Dependent.findById(req.params.id);
+    let dependent = await EmployeeDependent.findById(req.params.id); // Changed Dependent to EmployeeDependent
 
     if (!dependent) return res.status(404).json({ msg: 'Dependent not found' });
 
@@ -130,7 +130,7 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    await Dependent.findByIdAndRemove(req.params.id);
+    await EmployeeDependent.findByIdAndRemove(req.params.id); // Changed Dependent to EmployeeDependent
 
     res.json({ msg: 'Dependent removed' });
   } catch (err) {
