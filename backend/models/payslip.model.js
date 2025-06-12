@@ -83,7 +83,7 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payslips',
     timestamps: true, // createdAt, updatedAt
     paranoid: true,   // For soft deletes, if payslip history needs to be robustly kept
-underscored: true, // This correctly maps JS camelCase to DB snake_case
+    underscored: true, // This correctly maps JS camelCase to DB snake_case
     indexes: [
       // Sequelize will correctly map these camelCase fields to snake_case for the index creation
       { fields: ['tenantId'] },
