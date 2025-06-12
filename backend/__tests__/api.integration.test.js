@@ -39,7 +39,7 @@ describe('Payroll SaaS API Integration Tests', () => {
         await sequelize.sync({ force: true });
 
         // Seed data
-        const tenant = await Tenant.create({ name: "TechSolutions Inc.", country: "MA" });
+        const tenant = await Tenant.create({ name: "TechSolutions Inc.", country: "MA", schema_name: "techsolutions_inc" });
         techSolutionsTenantId = tenant.id;
         mockUser.tenantId = tenant.id; // Align mock user with the created tenant
 
