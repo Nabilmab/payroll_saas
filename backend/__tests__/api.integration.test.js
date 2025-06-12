@@ -61,6 +61,7 @@ describe('Payroll SaaS API Integration Tests', () => {
             relationship: "Fils",
             date_of_birth: "2010-05-15",
             is_fiscally_dependent: true,
+            effective_start_date: new Date(), // <-- ADD THIS LINE
             employeeId: ahmedBennaniEmployeeId,
             tenantId: techSolutionsTenantId
         });
