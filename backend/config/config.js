@@ -5,9 +5,13 @@ const path = require('path');
 // This ensures DATABASE_URL is available when this config is read.
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not defined.');
+}
+
 module.exports = {
   "development": {
-    "use_env_variable": "DATABASE_URL",
+    "url": process.env.DATABASE_URL,
     "dialect": "postgres"
   },
   "test": {
@@ -22,7 +26,7 @@ module.exports = {
     "logging": console.log
   },
   "production": {
-    "use_env_variable": "DATABASE_URL",
+    "url": process.env.DATABASE_URL,
     "dialect": "postgres",
     "dialectOptions": {
       "ssl": {
