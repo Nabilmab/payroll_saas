@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../server'); // Your refactored app
-const { sequelize, Tenant, User, Department, Employee, EmployeeDependent, SalaryComponent, PayrollRun, Payslip, PayslipItem } = require('../models');
+const { sequelize, Tenant, User, Department, Employee, EmployeeDependent, SalaryComponent, PayrollRun, Payslip, PayslipItem, PaySchedule } = require('../models');
 
 // --- MOCK THE AUTHENTICATION MIDDLEWARE ---
 const mockUser = {
