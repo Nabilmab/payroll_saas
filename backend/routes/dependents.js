@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 // Updated import statement as per user feedback
 const { Employee, EmployeeDependent } = require('../models');
-const auth = require('../middleware/auth');
+// Removed: const auth = require('../middleware/auth');
 const { check, validationResult } = require('express-validator');
 
 // @route   POST api/dependents
@@ -11,7 +11,7 @@ const { check, validationResult } = require('express-validator');
 router.post(
   '/',
   [
-    auth,
+    // auth, // Removed auth from route handler
     [
       check('name', 'Name is required').not().isEmpty(),
       check('relationship', 'Relationship is required').not().isEmpty(),
@@ -57,7 +57,7 @@ router.post(
 // @route   GET api/dependents/employee/:employeeId
 // @desc    Get all dependents for an employee
 // @access  Private
-router.get('/employee/:employeeId', auth, async (req, res) => {
+router.get('/employee/:employeeId', async (req, res) => { // Removed auth from route handler
   try {
     const employee = await Employee.findById(req.params.employeeId);
     if (!employee) {
@@ -84,7 +84,7 @@ router.get('/employee/:employeeId', auth, async (req, res) => {
 // @route   PUT api/dependents/:id
 // @desc    Update dependent
 // @access  Private
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', async (req, res) => { // Removed auth from route handler
   const { name, relationship, dateOfBirth } = req.body;
 
   // Build dependent object
@@ -119,7 +119,7 @@ router.put('/:id', auth, async (req, res) => {
 // @route   DELETE api/dependents/:id
 // @desc    Delete dependent
 // @access  Private
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => { // Removed auth from route handler
   try {
     let dependent = await EmployeeDependent.findById(req.params.id); // Changed Dependent to EmployeeDependent
 
