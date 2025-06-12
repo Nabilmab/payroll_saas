@@ -17,7 +17,9 @@ module.exports = {
     // Sequelize will now *always* have the correct URL for tests.
     //
     "url": process.env.DATABASE_URL,
-    "dialect": "postgres"
+    "dialect": "postgres",
+    // ADD THIS LINE TO SEE THE SQL QUERIES
+    "logging": console.log
   },
   "production": {
     "use_env_variable": "DATABASE_URL",
