@@ -17,7 +17,6 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       // Department can have many Employees
-      // This assumes an Employee model exists or will be created
       Department.hasMany(models.Employee, {
         foreignKey: 'departmentId',
         as: 'employees',
@@ -40,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
       onUpdate: 'CASCADE',
-      onDelete: 'CASCADE', // If a tenant is deleted, their departments are also deleted
+      onDelete: 'CASCADE',
     },
     name: {
       type: DataTypes.STRING,
@@ -50,16 +49,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    // You could add other fields like 'department_code', 'is_active', etc.
   }, {
     sequelize,
     modelName: 'Department',
-    tableName: 'departments', // Explicitly define table name
-    timestamps: true,   // Enable timestamps (createdAt, updatedAt)
-    paranoid: true,     // Enable soft deletes (deletedAt)
-    underscored: true,  // Use snake_case for automatically generated attributes
-    // Ensure `underscored: true` correctly maps JS model attributes (camelCase)
-    // to database column names (snake_case) for the index definitions.
+    tableName: 'departments',
+    timestamps: true,
+    paranoid: true,
+    underscored: true,
     indexes: [
       // Add a composite unique key for tenantId and name to ensure department names are unique within a tenant
       {
