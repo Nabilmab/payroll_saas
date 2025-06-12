@@ -14,26 +14,26 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'payrollRunId',
         as: 'payslips',
       });
-      // PayrollRun.belongsTo(models.Tenant, {
-      //   foreignKey: 'tenantId',
-      //   as: 'tenant',
-      //   allowNull: false,
-      // });
-      // PayrollRun.belongsTo(models.PaySchedule, {
-      //   foreignKey: 'payScheduleId',
-      //   as: 'paySchedule',
-      //   allowNull: false,
-      // });
-      // PayrollRun.belongsTo(models.User, {
-      //   foreignKey: 'processedByUserId',
-      //   as: 'processedByUser',
-      //   allowNull: true,
-      // });
-      // PayrollRun.belongsTo(models.User, {
-      //   foreignKey: 'approvedByUserId',
-      //   as: 'approvedByUser',
-      //   allowNull: true,
-      // });
+      PayrollRun.belongsTo(models.Tenant, {
+        foreignKey: 'tenantId',
+        as: 'tenant',
+        allowNull: false,
+      });
+      PayrollRun.belongsTo(models.PaySchedule, {
+        foreignKey: 'payScheduleId',
+        as: 'paySchedule',
+        allowNull: false,
+      });
+      PayrollRun.belongsTo(models.User, {
+        foreignKey: 'processedByUserId',
+        as: 'processedByUser',
+        allowNull: true,
+      });
+      PayrollRun.belongsTo(models.User, {
+        foreignKey: 'approvedByUserId',
+        as: 'approvedByUser',
+        allowNull: true,
+      });
     }
   }
 
@@ -48,14 +48,14 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'tenants', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'CASCADE',
+      references: { model: 'tenants', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
     payScheduleId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'pay_schedules', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'RESTRICT',
+      references: { model: 'pay_schedules', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'RESTRICT',
     },
     periodStart: { // Renamed from pay_period_start_date
       type: DataTypes.DATEONLY,
@@ -102,14 +102,14 @@ module.exports = (sequelize, DataTypes) => {
     processedByUserId: {
       type: DataTypes.UUID,
       allowNull: true,
-      // references: { model: 'users', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'SET NULL',
+      references: { model: 'users', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
     approvedByUserId: {
       type: DataTypes.UUID,
       allowNull: true,
-      // references: { model: 'users', key: 'id' }, // Associations commented out
-      // onUpdate: 'CASCADE', onDelete: 'SET NULL',
+      references: { model: 'users', key: 'id' },
+      onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
     processedAt: { // Renamed from processed_at
       type: DataTypes.DATE,
@@ -129,23 +129,16 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payroll_runs', // Keeping original table name
     timestamps: true,
     paranoid: true,
-    // underscored: true, // Removed as per instruction
-                       // but totalGrossPay etc. will be totalGrossPay in DB.
-                       // For consistency, I should probably stick to one naming convention.
-                       // The prompt implies camelCase for attributes, so I'll remove underscored: true
-                       // and ensure DB columns match model field names if that's the intent.
-                       // OR, keep underscored: true and ensure JS names are consistently camelCase.
-                       // I will keep underscored:true for now as it was in the previous version,
-                       // meaning DB columns will be snake_case for fields like periodStart.
+    underscored: true,
     indexes: [
-      // { fields: ['tenantId'] }, // Updated for camelCase if associations restored
-      // { fields: ['payScheduleId'] }, // Updated for camelCase if associations restored
+      { fields: ['tenant_id'] },
+      { fields: ['pay_schedule_id'] },
       { fields: ['status'] },
-      { fields: ['paymentDate'] }, // Updated to camelCase
+      { fields: ['payment_date'] },
       {
         unique: true,
-        fields: ['tenantId', 'payScheduleId', 'periodEnd', 'status'], // Added status field
-        name: 'unique_tenant_schedule_period_run' // Name can remain snake_case as it's a constraint name
+        fields: ['tenant_id', 'pay_schedule_id', 'period_end', 'status'],
+        name: 'unique_tenant_schedule_period_run'
       }
     ]
   });

@@ -27,7 +27,6 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'tenant_id',
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
@@ -35,7 +34,6 @@ module.exports = (sequelize, DataTypes) => {
     employeeId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'employee_id',
       references: { model: 'employees', key: 'id' },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',

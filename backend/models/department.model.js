@@ -35,7 +35,6 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: { // Foreign key for Tenant
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'tenant_id',
       references: {
         model: 'tenants', // Name of the Tenant table
         key: 'id',
