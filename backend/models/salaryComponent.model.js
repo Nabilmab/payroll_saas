@@ -141,17 +141,17 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     paranoid: true,
     underscored: true,
+    // Model attribute names (camelCase) are used in `fields`.
+    // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
-      { fields: ['tenant_id'] }, // DB column name, mapping from tenantId attribute handled by underscored: true
-      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_salary_component_name' }, // Same for tenant_id
-      // { fields: ['based_on_component_id'] }, // basedOnComponentId would map if uncommented
+      { fields: ['tenantId'] },
+      { unique: true, fields: ['tenantId', 'name'], name: 'unique_tenant_salary_component_name' },
+      // { fields: ['basedOnComponentId'] }, // basedOnComponentId (model attribute) would map if uncommented
       {
         unique: true,
-        // tenant_id and component_code are DB column names.
-        // Mapping from model attributes (tenantId, componentCode) handled by underscored: true.
-        fields: ['tenant_id', 'component_code'],
+        fields: ['tenantId', 'componentCode'], // Model attributes
         name: 'unique_tenant_component_code',
-        // where clause referring to component_code (DB column) would also be correctly mapped if componentCode attribute is used in JS.
+        // where clause referring to componentCode (model attribute) would also be correctly mapped.
       }
     ]
   });

@@ -100,11 +100,10 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,   // Enable timestamps (createdAt, updatedAt)
     paranoid: true,     // Enable soft deletes, aligns with Employee model
     underscored: true,
+    // Model attribute `employeeId` (camelCase) will be mapped to `employee_id` (snake_case)
+    // in the DB due to `underscored: true`.
     indexes: [
-      // employee_id here refers to the DB column name.
-      // Sequelize will map the employeeId attribute (camelCase) to employee_id column (snake_case)
-      // due to `underscored: true`.
-      { fields: ['employee_id'], unique: true }
+      { fields: ['employeeId'], unique: true }
     ]
   });
 

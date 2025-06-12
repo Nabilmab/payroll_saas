@@ -65,11 +65,13 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,   // Enable timestamps (createdAt, updatedAt)
     paranoid: true,     // Enable soft deletes (deletedAt)
     underscored: true,  // Use snake_case for automatically generated attributes
+    // Model attribute names (camelCase) are used in `fields`.
+    // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
       // Add a composite unique key for tenantId and name to ensure role names are unique within a tenant
       {
         unique: true,
-        fields: ['tenant_id', 'name']
+        fields: ['tenantId', 'name']
       }
     ]
   });

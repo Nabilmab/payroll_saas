@@ -91,10 +91,12 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     paranoid: true, // Soft delete might be required for audit trails
     underscored: true,
+    // Model attribute `employeeId` (camelCase) will be mapped to `employee_id` (snake_case)
+    // in the DB due to `underscored: true`.
     indexes: [
-      { fields: ['employee_id'] }, // Refers to DB column name, mapping handled by underscored: true
-      // An employee might have multiple bank accounts, so employee_id is not unique here alone.
-      // A combination of employee_id and account_number (if decrypted) might be unique,
+      { fields: ['employeeId'] },
+      // An employee might have multiple bank accounts, so employeeId is not unique here alone.
+      // A combination of employeeId and accountNumber (if decrypted) might be unique,
       // but enforcing uniqueness on encrypted data is tricky at DB level.
       // Application logic should handle preventing exact duplicates if needed.
     ]
