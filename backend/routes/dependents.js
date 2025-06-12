@@ -1,0 +1,142 @@
+const express = require('express');
+const router = express.Router();
+const Dependent = require('../models/Dependent');
+const Employee = require('../models/Employee');
+const auth = require('../middleware/auth');
+const { check, validationResult } = require('express-validator');
+
+// @route   POST api/dependents
+// @desc    Add new dependent
+// @access  Private
+router.post(
+  '/',
+  [
+    auth,
+    [
+      check('name', 'Name is required').not().isEmpty(),
+      check('relationship', 'Relationship is required').not().isEmpty(),
+      check('employeeId', 'Employee ID is required').not().isEmpty(),
+    ],
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, relationship, dateOfBirth, employeeId } = req.body;
+
+    try {
+      const employee = await Employee.findById(employeeId);
+      if (!employee) {
+        return res.status(404).json({ msg: 'Employee not found' });
+      }
+
+      // Make sure user owns employee
+      if (employee.user.toString() !== req.user.id) {
+        return res.status(401).json({ msg: 'Not authorized' });
+      }
+
+      const newDependent = new Dependent({
+        name,
+        relationship,
+        dateOfBirth,
+        employee: employeeId,
+        user: req.user.id,
+      });
+
+      const dependent = await newDependent.save();
+      res.json(dependent);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+  }
+);
+
+// @route   GET api/dependents/employee/:employeeId
+// @desc    Get all dependents for an employee
+// @access  Private
+router.get('/employee/:employeeId', auth, async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.employeeId);
+    if (!employee) {
+      return res.status(404).json({ msg: 'Employee not found' });
+    }
+
+    // Make sure user owns employee
+    if (employee.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    const dependents = await Dependent.find({
+      employee: req.params.employeeId,
+    }).sort({
+      date: -1,
+    });
+    res.json(dependents);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/dependents/:id
+// @desc    Update dependent
+// @access  Private
+router.put('/:id', auth, async (req, res) => {
+  const { name, relationship, dateOfBirth } = req.body;
+
+  // Build dependent object
+  const dependentFields = {};
+  if (name) dependentFields.name = name;
+  if (relationship) dependentFields.relationship = relationship;
+  if (dateOfBirth) dependentFields.dateOfBirth = dateOfBirth;
+
+  try {
+    let dependent = await Dependent.findById(req.params.id);
+
+    if (!dependent) return res.status(404).json({ msg: 'Dependent not found' });
+
+    // Make sure user owns dependent
+    if (dependent.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    dependent = await Dependent.findByIdAndUpdate(
+      req.params.id,
+      { $set: dependentFields },
+      { new: true }
+    );
+
+    res.json(dependent);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE api/dependents/:id
+// @desc    Delete dependent
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    let dependent = await Dependent.findById(req.params.id);
+
+    if (!dependent) return res.status(404).json({ msg: 'Dependent not found' });
+
+    // Make sure user owns dependent
+    if (dependent.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    await Dependent.findByIdAndRemove(req.params.id);
+
+    res.json({ msg: 'Dependent removed' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+module.exports = router;
