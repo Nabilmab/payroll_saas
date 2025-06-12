@@ -1,49 +1,46 @@
+// REMOVED: The require('dotenv').config() call from the top of this file.
+
 const express = require('express');
-const path = require('path');
-// User model removed, sequelize kept. Auth middleware imported.
+const cors = require('cors');
+// Only require what's needed for this file.
 const { sequelize } = require('./models');
 const { authenticateAndAttachUser } = require('./middleware/auth');
 
-// Corrected path to existing payroll routes file
+// Import routers
+const authRoutes = require('./routes/auth');
+const employeeRoutes = require('./routes/employees');
+const dependentRoutes = require('./routes/dependents');
 const payrollRoutes = require('./routes/payroll');
+const salaryComponentRoutes = require('./routes/salaryComponents');
 
 const app = express();
+const PORT = process.env.PORT || 3001;
 
-// Init Middleware
-app.use(express.json({ extended: false }));
+// --- Middleware & Routes ---
+app.use(cors());
+app.use(express.json());
+app.get('/', (req, res) => res.send('<h1>Payroll SaaS API is running!</h1>'));
 
-// Define Routes
-// Other routes like auth, employees, dependents are removed as per the focus on payrollRoutes and new structure.
-// If they need to be re-added, they should follow a similar pattern, potentially also using authenticateAndAttachUser.
-
-// Payroll routes mounted as specifically requested
+app.use('/api/auth', authRoutes);
+app.use('/api/employees', authenticateAndAttachUser, employeeRoutes);
+app.use('/api/dependents', authenticateAndAttachUser, dependentRoutes);
 app.use('/api', authenticateAndAttachUser, payrollRoutes);
+app.use('/api/salary-components', authenticateAndAttachUser, salaryComponentRoutes);
 
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  // Set static folder
-  app.use(express.static('client/build'));
-
-  app.get('*', (req, res) =>
-    res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'))
-  );
-}
-
-const PORT = process.env.PORT || 5000; // Or 3001 if that was the Sequelize port
-
-// Start server with sequelize sync (optional, depends on setup)
+// --- Server Startup Logic ---
 const startServer = async () => {
-  try {
-    // await sequelize.sync(); // Or sequelize.authenticate()
-    await sequelize.authenticate(); // More common for just checking connection
-    console.log('✅ Database connection is successful (Sequelize).');
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server is listening on http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error('❌ Unable to start server (Sequelize):', error);
+  if (require.main === module) {
+    try {
+      await sequelize.authenticate();
+      console.log('✅ Database connection is successful.');
+      app.listen(PORT, () => console.log(`🚀 Server is listening on http://localhost:${PORT}`));
+    } catch (error) {
+      console.error('❌ Unable to start server:', error);
+      process.exit(1);
+    }
   }
 };
 
 startServer();
+
+module.exports = app;
