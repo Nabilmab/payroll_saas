@@ -53,34 +53,34 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     // For weekly/bi-weekly
-    pay_period_start_day: { // e.g., 1 (Monday) to 7 (Sunday) for weekly/bi-weekly
+    payPeriodStartDay: { // e.g., 1 (Monday) to 7 (Sunday) for weekly/bi-weekly
       type: DataTypes.INTEGER, // 1 for Monday, 7 for Sunday, etc.
       allowNull: true, // Null if not applicable (e.g. monthly)
     },
     // For semi-monthly
-    first_pay_day_of_month: { // e.g., 15 (for 15th of the month)
+    firstPayDayOfMonth: { // e.g., 15 (for 15th of the month)
       type: DataTypes.INTEGER,
       allowNull: true, // Null if not semi-monthly
     },
-    second_pay_day_of_month: { // e.g., 30 (for 30th or end of month)
+    secondPayDayOfMonth: { // e.g., 30 (for 30th or end of month)
       type: DataTypes.INTEGER,
       allowNull: true, // Null if not semi-monthly
     },
     // For monthly
-    pay_day_of_month: { // e.g., 25 (for 25th of the month) or -1 (for last day of month)
+    payDayOfMonth: { // e.g., 25 (for 25th of the month) or -1 (for last day of month)
       type: DataTypes.INTEGER,
       allowNull: true, // Null if not monthly
     },
-    pay_day_offset_days: { // Number of days after period end when payment is made.
+    payDayOffsetDays: { // Number of days after period end when payment is made.
       type: DataTypes.INTEGER,
       allowNull: true, // e.g., 5 days after period ends.
     },
-    processing_day_offset_days: { // How many days before pay day should payroll be processed.
+    processingDayOffsetDays: { // How many days before pay day should payroll be processed.
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 2
     },
-    is_active: {
+    isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
       allowNull: false,
@@ -97,8 +97,8 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true,
     underscored: true,
     indexes: [
-      { fields: ['tenant_id'] },
-      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_payschedule_name' }
+      { fields: ['tenant_id'] }, // DB column name, mapping from tenantId attribute handled by underscored: true
+      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_payschedule_name' } // Same here
     ]
   });
 

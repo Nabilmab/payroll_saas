@@ -65,7 +65,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('earning', 'deduction'),
       allowNull: false,
     },
-    calculation_type: { // How the component value is determined
+    calculationType: { // How the component value is determined
       type: DataTypes.ENUM('fixed', 'percentage', 'formula'), // 'formula' might need custom logic
       allowNull: false,
       defaultValue: 'fixed',
@@ -92,26 +92,26 @@ module.exports = (sequelize, DataTypes) => {
     //   type: DataTypes.JSONB,
     //   allowNull: true,
     // },
-    is_taxable: {
+    isTaxable: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: false,
     },
-    is_active: {
+    isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
       allowNull: false,
     },
-    is_system_defined: { // Indicates if this is a system-provided default component
+    isSystemDefined: { // Indicates if this is a system-provided default component
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: false,
     },
-    payslip_display_order: {
+    payslipDisplayOrder: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    component_code: { // For specific system components like 'SALBASE', 'IGR_PRELEV', 'CNSS_COT', 'AMO_COT'
+    componentCode: { // For specific system components like 'SALBASE', 'IGR_PRELEV', 'CNSS_COT', 'AMO_COT'
       type: DataTypes.STRING,
       allowNull: true, // Can be null for tenant-defined components
     },
@@ -120,12 +120,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'employee_earning',
     },
-    is_cnss_subject: { // Does this component contribute to the CNSS taxable base?
+    isCnssSubject: { // Does this component contribute to the CNSS taxable base?
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: false,
     },
-    is_amo_subject: { // Does this component contribute to the AMO taxable base?
+    isAmoSubject: { // Does this component contribute to the AMO taxable base?
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: false,
@@ -142,18 +142,16 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true,
     underscored: true,
     indexes: [
-      { fields: ['tenant_id'] },
-      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_salary_component_name' },
-      // { fields: ['based_on_component_id'] },
+      { fields: ['tenant_id'] }, // DB column name, mapping from tenantId attribute handled by underscored: true
+      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_salary_component_name' }, // Same for tenant_id
+      // { fields: ['based_on_component_id'] }, // basedOnComponentId would map if uncommented
       {
         unique: true,
+        // tenant_id and component_code are DB column names.
+        // Mapping from model attributes (tenantId, componentCode) handled by underscored: true.
         fields: ['tenant_id', 'component_code'],
-        name: 'unique_tenant_component_code', // Simplified name as Op.ne is not used
-        // where: { // Omitting 'where' clause as Op is not readily available and it's simpler
-        //   component_code: { // This would require Op
-        //     [Op.ne]: null
-        //   }
-        // }
+        name: 'unique_tenant_component_code',
+        // where clause referring to component_code (DB column) would also be correctly mapped if componentCode attribute is used in JS.
       }
     ]
   });

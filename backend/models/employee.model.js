@@ -85,16 +85,16 @@ module.exports = (sequelize, DataTypes) => {
       references: { model: 'users', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
-    employee_id_alt: { // An alternative employee ID, e.g., from an external system or company-specific
+    employeeIdAlt: { // An alternative employee ID, e.g., from an external system or company-specific
       type: DataTypes.STRING,
       allowNull: true,
       // unique: true, // Could be unique within a tenant
     },
-    first_name: {
+    firstName: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    last_name: {
+    lastName: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -104,7 +104,7 @@ module.exports = (sequelize, DataTypes) => {
       validate: { isEmail: true },
       // unique: true, // Could be unique within a tenant
     },
-    phone_number: {
+    phoneNumber: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -112,19 +112,19 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    job_title: {
+    jobTitle: {
       type: DataTypes.STRING,
       allowNull: true, // Or false
     },
-    date_of_birth: {
+    dateOfBirth: {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
-    hire_date: {
+    hireDate: {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
-    termination_date: {
+    terminationDate: {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
@@ -155,8 +155,11 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['tenant_id'] },
       { fields: ['department_id'] },
       { fields: ['user_id'] },
-      { unique: true, fields: ['tenant_id', 'email'],  name: 'unique_tenant_employee_email',  where: { email: { [Op.ne]: null } } }, // Unique work email within a tenant if not null
-      { unique: true, fields: ['tenant_id', 'employee_id_alt'], name: 'unique_tenant_employee_id_alt', where: { employee_id_alt: { [Op.ne]: null } } } // Unique alt ID within a tenant if not null
+      // Sequelize will map camelCase attribute `email` to `email` column (if not specified otherwise by `field`)
+      // and `tenantId` to `tenant_id` (due to underscored: true) for the index.
+      { unique: true, fields: ['tenant_id', 'email'],  name: 'unique_tenant_employee_email',  where: { email: { [Op.ne]: null } } },
+      // Sequelize will map camelCase attribute `employeeIdAlt` to `employee_id_alt` column (due to underscored: true) for the index.
+      { unique: true, fields: ['tenant_id', 'employee_id_alt'], name: 'unique_tenant_employee_id_alt', where: { employee_id_alt: { [Op.ne]: null } } }
     ]
   });
 

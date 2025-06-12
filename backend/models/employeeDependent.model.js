@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     },
-    full_name: {
+    fullName: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -46,23 +46,23 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('spouse', 'child', 'other_relative', 'civil_partner'), // Added more options
       allowNull: false,
     },
-    date_of_birth: {
+    dateOfBirth: {
       type: DataTypes.DATEONLY,
       allowNull: true, // Might not always be known or relevant for all types
     },
     // Indicates if this dependent qualifies for fiscal deductions (e.g., IGR relief in Morocco)
-    is_fiscally_dependent: {
+    isFiscallyDependent: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
     },
     // For tracking changes over time, e.g., if a dependent stops being fiscally dependent
-    effective_start_date: {
+    effectiveStartDate: {
       type: DataTypes.DATEONLY,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    effective_end_date: {
+    effectiveEndDate: {
       type: DataTypes.DATEONLY,
       allowNull: true, // Null means currently effective
     },
@@ -79,9 +79,10 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true, // Soft delete for historical records
     underscored: true,
     indexes: [
-      { fields: ['tenant_id'] },
-      { fields: ['employee_id'] },
-      { fields: ['employee_id', 'full_name', 'date_of_birth'], unique: true, name: 'unique_employee_dependent_profile' } // Prevent exact duplicates for an employee
+      { fields: ['tenant_id'] }, // DB column name
+      { fields: ['employee_id'] }, // DB column name
+      // DB column names, mapping from model attributes (fullName, dateOfBirth) handled by underscored: true
+      { fields: ['employee_id', 'full_name', 'date_of_birth'], unique: true, name: 'unique_employee_dependent_profile' }
     ]
   });
 

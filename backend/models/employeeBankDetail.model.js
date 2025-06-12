@@ -40,20 +40,20 @@ module.exports = (sequelize, DataTypes) => {
     },
     // All fields below are highly sensitive.
     // Ensure proper security measures like encryption at rest and restricted access are implemented.
-    account_holder_name: {
+    accountHolderName: {
       type: DataTypes.STRING, // Potentially encrypted
       allowNull: false,
     },
-    bank_name: {
+    bankName: {
       type: DataTypes.STRING, // Potentially encrypted
       allowNull: false,
     },
-    account_number: { // This should definitely be encrypted if stored.
+    accountNumber: { // This should definitely be encrypted if stored.
       type: DataTypes.STRING, // Store encrypted
       allowNull: false,
       // Add validation for format if possible
     },
-    routing_number: { // (e.g., ABA for US, or sort code for UK) - Encrypt if stored.
+    routingNumber: { // (e.g., ABA for US, or sort code for UK) - Encrypt if stored.
       type: DataTypes.STRING, // Store encrypted
       allowNull: true, // May not be applicable for all regions/banks
     },
@@ -61,11 +61,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING, // Store encrypted
       allowNull: true,
     },
-    swift_bic: { // SWIFT/BIC code - Encrypt if stored.
+    swiftBic: { // SWIFT/BIC code - Encrypt if stored.
       type: DataTypes.STRING, // Store encrypted
       allowNull: true,
     },
-    account_type: { // E.g., 'checking', 'savings'
+    accountType: { // E.g., 'checking', 'savings'
       type: DataTypes.ENUM('checking', 'savings', 'other'),
       allowNull: true,
     },
@@ -74,7 +74,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'USD', // Set a common default
     },
-    is_primary: { // If an employee can have multiple accounts, one might be primary
+    isPrimary: { // If an employee can have multiple accounts, one might be primary
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: false,
@@ -92,7 +92,7 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true, // Soft delete might be required for audit trails
     underscored: true,
     indexes: [
-      { fields: ['employee_id'] },
+      { fields: ['employee_id'] }, // Refers to DB column name, mapping handled by underscored: true
       // An employee might have multiple bank accounts, so employee_id is not unique here alone.
       // A combination of employee_id and account_number (if decrypted) might be unique,
       // but enforcing uniqueness on encrypted data is tricky at DB level.

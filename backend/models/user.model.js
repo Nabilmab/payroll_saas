@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
 
     // Instance method to check password
     validPassword(password) {
-      return bcrypt.compareSync(password, this.password_hash);
+      return bcrypt.compareSync(password, this.passwordHash);
     }
   }
 
@@ -49,11 +49,11 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE', // Or 'SET NULL' or 'RESTRICT' depending on requirements
     },
-    first_name: {
+    firstName: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    last_name: {
+    lastName: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -65,7 +65,7 @@ module.exports = (sequelize, DataTypes) => {
         isEmail: true,
       },
     },
-    password_hash: {
+    passwordHash: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -74,7 +74,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'pending_verification',
       allowNull: false,
     },
-    last_login_at: {
+    lastLoginAt: {
       type: DataTypes.DATE,
       allowNull: true,
     },
@@ -90,18 +90,18 @@ module.exports = (sequelize, DataTypes) => {
     hooks: {
       // Before saving, hash the password if it has been changed
       beforeSave: async (user, options) => {
-        if (user.changed('password_hash')) { // Or if you have a virtual 'password' field
+        if (user.changed('passwordHash')) { // Or if you have a virtual 'password' field
           const salt = await bcrypt.genSalt(10);
-          user.password_hash = await bcrypt.hash(user.password_hash, salt);
+          user.passwordHash = await bcrypt.hash(user.passwordHash, salt);
         }
       },
     },
     defaultScope: {
-      attributes: { exclude: ['password_hash'] }, // Don't return password hash by default
+      attributes: { exclude: ['passwordHash'] }, // Don't return password hash by default
     },
     scopes: {
       withPassword: {
-        attributes: { include: ['password_hash'] },
+        attributes: { include: ['passwordHash'] },
       },
     },
   });

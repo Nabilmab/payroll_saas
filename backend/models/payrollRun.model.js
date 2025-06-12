@@ -129,15 +129,16 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payroll_runs', // Keeping original table name
     timestamps: true,
     paranoid: true,
-    underscored: true,
+underscored: true, // This is correct, it maps JS camelCase to DB snake_case
     indexes: [
-      { fields: ['tenant_id'] },
-      { fields: ['pay_schedule_id'] },
+      // Sequelize will correctly map these camelCase fields to snake_case for the index creation
+      { fields: ['tenantId'] },
+      { fields: ['payScheduleId'] },
       { fields: ['status'] },
-      { fields: ['payment_date'] },
+      { fields: ['paymentDate'] },
       {
         unique: true,
-        fields: ['tenant_id', 'pay_schedule_id', 'period_end', 'status'],
+        fields: ['tenantId', 'payScheduleId', 'periodEnd', 'status'],
         name: 'unique_tenant_schedule_period_run'
       }
     ]

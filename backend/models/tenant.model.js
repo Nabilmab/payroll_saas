@@ -66,7 +66,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'active',
       allowNull: false,
     },
-    schema_name: {
+    schemaName: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true
