@@ -161,7 +161,7 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
                 const component = setting.salaryComponent;
                 if (!component || component.component_code === 'BASE_SALARY_MONTHLY') continue;
 
-                if (component.type === 'earning' && component.calculation_type === 'fixed') {
+                if (component.type === 'earning' && component.calculationType === 'fixed') {
                     let itemAmountMonthly = parseFloat(setting.amount ?? component.amount ?? 0); // CORRECTED
                     employeeContext.payslipItems.push({ component, amount: itemAmountMonthly, type: 'earning' });
                     employeeContext.grossPay += itemAmountMonthly;
@@ -176,7 +176,7 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
             console.log(`      Pass 2: Percentage-Based Components`);
             for (const setting of employeeContext.settings) {
                 const component = setting.salaryComponent;
-                if (!component || component.calculation_type !== 'percentage') continue;
+                if (!component || component.calculationType !== 'percentage') continue;
                 if (['CNSS_EMPLOYEE', 'AMO_EMPLOYEE', 'IGR_MONTHLY'].includes(component.component_code)) continue; // Handled in statutory pass
 
                 // Assuming percentage components are based on monthlyBaseSalary for now
@@ -263,9 +263,9 @@ async function processPayroll(tenantId, payScheduleId, periodEndDate, paymentDat
                 const component = setting.salaryComponent;
                 if (!component || component.component_code === 'BASE_SALARY_MONTHLY') continue;
                 if (['CNSS_EMPLOYEE', 'AMO_EMPLOYEE', 'IGR_MONTHLY'].includes(component.component_code)) continue;
-                if (component.calculation_type === 'percentage') continue; // Already handled
+                if (component.calculationType === 'percentage') continue; // Already handled
 
-                if (component.type === 'deduction' && component.calculation_type === 'fixed') {
+                if (component.type === 'deduction' && component.calculationType === 'fixed') {
                     let itemAmountMonthly = parseFloat(setting.amount ?? component.amount ?? 0);
                     employeeContext.payslipItems.push({ component, amount: itemAmountMonthly, type: 'deduction' });
                     employeeContext.otherDeductions += itemAmountMonthly;

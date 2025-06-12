@@ -38,7 +38,7 @@ router.post('/', async (req, res) => {
             return res.status(401).json({ error: 'User not authenticated or tenantId missing.' });
         }
         const { tenantId } = req.user;
-        const { name, description, type, calculation_type, amount, percentage, is_taxable, payslip_display_order, category } = req.body;
+        const { name, description, type, calculationType, amount, percentage, is_taxable, payslip_display_order, category } = req.body;
 
         const VALID_CATEGORIES = ['employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction'];
         if (category && !VALID_CATEGORIES.includes(category)) {
@@ -57,7 +57,7 @@ router.post('/', async (req, res) => {
 
 
         const validCalculationTypes = ['fixed', 'percentage', 'formula'];
-        if (!calculation_type || !validCalculationTypes.includes(calculation_type)) {
+        if (!calculationType || !validCalculationTypes.includes(calculationType)) {
             return res.status(400).json({ error: `Calculation type must be one of: ${validCalculationTypes.join(', ')}.` });
         }
 
@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
             name,
             description,
             type,
-            calculation_type,
+            calculationType,
             is_taxable: !!is_taxable,
             is_system_defined: false, // New components are never system_defined
             is_active: true, // Default to active
@@ -76,12 +76,12 @@ router.post('/', async (req, res) => {
             category: category
         };
 
-        if (calculation_type === 'fixed') {
+        if (calculationType === 'fixed') {
             if (amount === undefined || amount === null || isNaN(parseFloat(amount))) {
                 return res.status(400).json({ error: 'Valid amount is required for fixed calculation type.' });
             }
             newSalaryComponentData.amount = parseFloat(amount);
-        } else if (calculation_type === 'percentage') {
+        } else if (calculationType === 'percentage') {
             if (percentage === undefined || percentage === null || isNaN(parseFloat(percentage))) {
                 return res.status(400).json({ error: 'Valid percentage is required for percentage calculation type.' });
             }
@@ -108,7 +108,7 @@ router.put('/:componentId', async (req, res) => {
         }
         const { tenantId } = req.user;
         const { componentId } = req.params;
-        const { name, description, type, calculation_type, amount, percentage, is_taxable, is_active, payslip_display_order, category } = req.body;
+        const { name, description, type, calculationType, amount, percentage, is_taxable, is_active, payslip_display_order, category } = req.body;
 
         const component = await SalaryComponent.findOne({
             where: { id: componentId, tenantId: tenantId, is_system_defined: false } // Can only update non-system components
@@ -132,28 +132,28 @@ router.put('/:componentId', async (req, res) => {
             component.type = type;
         }
 
-        if (calculation_type !== undefined) {
+        if (calculationType !== undefined) {
             const validCalculationTypes = ['fixed', 'percentage', 'formula'];
-            if (!validCalculationTypes.includes(calculation_type)) {
+            if (!validCalculationTypes.includes(calculationType)) {
                 return res.status(400).json({ error: `Calculation type must be one of: ${validCalculationTypes.join(', ')}.` });
             }
-            component.calculation_type = calculation_type;
+            component.calculationType = calculationType;
         }
 
-        // Reset amount/percentage based on new calculation_type or update existing values
-        if (component.calculation_type === 'fixed') {
+        // Reset amount/percentage based on new calculationType or update existing values
+        if (component.calculationType === 'fixed') {
             component.percentage = null;
             if (amount !== undefined) { // Only update if amount is provided
                  if (amount === null || isNaN(parseFloat(amount))) return res.status(400).json({ error: 'Valid amount is required for fixed calculation type.' });
                  component.amount = parseFloat(amount);
             }
-        } else if (component.calculation_type === 'percentage') {
+        } else if (component.calculationType === 'percentage') {
             component.amount = null;
             if (percentage !== undefined) { // Only update if percentage is provided
                 if (percentage === null || isNaN(parseFloat(percentage))) return res.status(400).json({ error: 'Valid percentage is required for percentage type.' });
                 component.percentage = parseFloat(percentage);
             }
-        } else if (component.calculation_type === 'formula') {
+        } else if (component.calculationType === 'formula') {
             component.amount = null;
             component.percentage = null;
         }

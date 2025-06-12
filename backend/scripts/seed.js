@@ -102,7 +102,7 @@ const employeesData = [
  * @property {string} name
  * @property {string} tenantName
  * @property {string} type - 'earning' or 'deduction'
- * @property {string} calculation_type - 'fixed', 'percentage', or 'formula'
+ * @property {string} calculationType - 'fixed', 'percentage', or 'formula'
  * @property {number} [amount] - Required if calculation_type is 'fixed'
  * @property {number} [percentage] - Required if calculation_type is 'percentage'
  * @property {boolean} is_taxable
@@ -114,36 +114,36 @@ const employeesData = [
  */
 const salaryComponentsData = [
   // --- TechSolutions SARL ---
-  { name: "Salaire de Base", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculation_type: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
-  { name: "Prime d'Ancienneté", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculation_type: "formula", is_taxable: true, component_code: 'SENIORITY_BONUS', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
-  { name: "Indemnité de Transport", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculation_type: "fixed", amount: 500, is_taxable: false, component_code: 'TRANSPORT_ALLOWANCE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 10 },
-  { name: "CNSS", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
-  { name: "AMO", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
-  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculation_type: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
-  { name: "CNSS - Part Patronale", tenantName: "TechSolutions SARL", type: "deduction", category: "employer_contribution_social", calculation_type: "percentage", percentage: 15.96, is_taxable: false, component_code: 'CNSS_EMPLOYER', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 200 },
-  { name: "Taxe Formation Professionnelle", tenantName: "TechSolutions SARL", type: "deduction", category: "employer_contribution_other", calculation_type: "percentage", percentage: 1.6, is_taxable: false, component_code: 'TFP_EMPLOYER', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 201 },
+  { name: "Salaire de Base", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculationType: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
+  { name: "Prime d'Ancienneté", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculationType: "formula", is_taxable: true, component_code: 'SENIORITY_BONUS', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
+  { name: "Indemnité de Transport", tenantName: "TechSolutions SARL", type: "earning", category: "employee_earning", calculationType: "fixed", amount: 500, is_taxable: false, component_code: 'TRANSPORT_ALLOWANCE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 10 },
+  { name: "CNSS", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculationType: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
+  { name: "AMO", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculationType: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
+  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "TechSolutions SARL", type: "deduction", category: "statutory_deduction", calculationType: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
+  { name: "CNSS - Part Patronale", tenantName: "TechSolutions SARL", type: "deduction", category: "employer_contribution_social", calculationType: "percentage", percentage: 15.96, is_taxable: false, component_code: 'CNSS_EMPLOYER', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 200 },
+  { name: "Taxe Formation Professionnelle", tenantName: "TechSolutions SARL", type: "deduction", category: "employer_contribution_other", calculationType: "percentage", percentage: 1.6, is_taxable: false, component_code: 'TFP_EMPLOYER', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 201 },
 
   // --- Artisanat Marocain Coop ---
-  { name: "Salaire de Base", tenantName: "Artisanat Marocain Coop", type: "earning", category: "employee_earning", calculation_type: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
-  { name: "Prime de Rendement", tenantName: "Artisanat Marocain Coop", type: "earning", category: "employee_earning", calculation_type: "fixed", amount: 1000, is_taxable: true, component_code: null, is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
-  { name: "CNSS", tenantName: "Artisanat Marocain Coop", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
-  { name: "AMO", tenantName: "Artisanat Marocain Coop", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
-  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Artisanat Marocain Coop", type: "deduction", category: "statutory_deduction", calculation_type: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
+  { name: "Salaire de Base", tenantName: "Artisanat Marocain Coop", type: "earning", category: "employee_earning", calculationType: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
+  { name: "Prime de Rendement", tenantName: "Artisanat Marocain Coop", type: "earning", category: "employee_earning", calculationType: "fixed", amount: 1000, is_taxable: true, component_code: null, is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
+  { name: "CNSS", tenantName: "Artisanat Marocain Coop", type: "deduction", category: "statutory_deduction", calculationType: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
+  { name: "AMO", tenantName: "Artisanat Marocain Coop", type: "deduction", category: "statutory_deduction", calculationType: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
+  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Artisanat Marocain Coop", type: "deduction", category: "statutory_deduction", calculationType: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
 
   // --- Services Financiers Al Maghrib ---
-  { name: "Salaire de Base", tenantName: "Services Financiers Al Maghrib", type: "earning", category: "employee_earning", calculation_type: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
-  { name: "Bonus de Performance", tenantName: "Services Financiers Al Maghrib", type: "earning", category: "employee_earning", calculation_type: "percentage", percentage: 10.00, is_taxable: true, component_code: null, is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
-  { name: "CNSS", tenantName: "Services Financiers Al Maghrib", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
-  { name: "AMO", tenantName: "Services Financiers Al Maghrib", type: "deduction", category: "statutory_deduction", calculation_type: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
-  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Services Financiers Al Maghrib", type: "deduction", category: "statutory_deduction", calculation_type: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
+  { name: "Salaire de Base", tenantName: "Services Financiers Al Maghrib", type: "earning", category: "employee_earning", calculationType: "fixed", is_taxable: true, component_code: 'BASE_SALARY_MONTHLY', is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 1 },
+  { name: "Bonus de Performance", tenantName: "Services Financiers Al Maghrib", type: "earning", category: "employee_earning", calculationType: "percentage", percentage: 10.00, is_taxable: true, component_code: null, is_cnss_subject: true, is_amo_subject: true, payslip_display_order: 5 },
+  { name: "CNSS", tenantName: "Services Financiers Al Maghrib", type: "deduction", category: "statutory_deduction", calculationType: "percentage", percentage: 6.74, is_taxable: false, component_code: 'CNSS_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 100 },
+  { name: "AMO", tenantName: "Services Financiers Al Maghrib", type: "deduction", category: "statutory_deduction", calculationType: "percentage", percentage: 2.26, is_taxable: false, component_code: 'AMO_EMPLOYEE', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 101 },
+  { name: "IGR (Impôt Général sur le Revenu)", tenantName: "Services Financiers Al Maghrib", type: "deduction", category: "statutory_deduction", calculationType: "formula", is_taxable: false, component_code: 'IGR_MONTHLY', is_cnss_subject: false, is_amo_subject: false, payslip_display_order: 102 },
 ];
 
 /**
  * @typedef {Object} PayScheduleData
  * @property {string} name
  * @property {string} frequency - 'monthly', 'weekly', 'bi-weekly'
- * @property {number} [pay_day_of_month] - For monthly frequency
- * @property {number} [pay_period_start_day] - For weekly/bi-weekly if applicable (e.g. 1 for Monday)
+ * @property {number} [payDayOfMonth] - For monthly frequency
+ * @property {number} [payPeriodStartDay] - For weekly/bi-weekly if applicable (e.g. 1 for Monday)
  * @property {string} tenantName
  * @property {PaySchedule?} instance - Will store the Sequelize instance.
  */
@@ -151,25 +151,25 @@ const paySchedulesData = [
   {
     name: "Paiement Mensuel Standard",
     frequency: "monthly",
-    pay_day_of_month: 28,
+    payDayOfMonth: 28,
     tenantName: "TechSolutions SARL"
   },
   {
     name: "Paiement Fin de Mois Artisans",
     frequency: "monthly",
-    pay_day_of_month: 30,
+    payDayOfMonth: 30,
     tenantName: "Artisanat Marocain Coop"
   },
   {
     name: "Paiement Mensuel Cadres",
     frequency: "monthly",
-    pay_day_of_month: 25,
+    payDayOfMonth: 25,
     tenantName: "Services Financiers Al Maghrib"
   },
   {
     name: "Paiement Hebdomadaire Stagiaires",
     frequency: "weekly",
-    pay_period_start_day: 1,
+    payPeriodStartDay: 1,
     tenantName: "TechSolutions SARL"
   }
 ];
@@ -407,7 +407,7 @@ async function seedSalaryComponents() {
         tenantId: tenant.id, // tenantId is part of whereClause
         type: scData.type,   // type is part of whereClause
         category: scData.category,
-        calculation_type: scData.calculation_type,
+        calculationType: scData.calculationType,
         description: scData.description || null,
         is_taxable: typeof scData.is_taxable === 'boolean' ? scData.is_taxable : false,
         component_code: scData.component_code || null,
@@ -418,9 +418,9 @@ async function seedSalaryComponents() {
         percentage: null
     };
 
-    if (scData.calculation_type === 'fixed') {
+    if (scData.calculationType === 'fixed') {
         defaults.amount = scData.amount || null;
-    } else if (scData.calculation_type === 'percentage') {
+    } else if (scData.calculationType === 'percentage') {
         defaults.percentage = scData.percentage || null;
     }
 
@@ -473,20 +473,20 @@ async function seedSalaryComponents() {
         component.payslip_display_order = defaults.payslip_display_order || null;
         updated = true;
       }
-      if (component.calculation_type !== defaults.calculation_type) {
-        console.log(`Updating calculation_type for existing SalaryComponent '${component.name}' from '${component.calculation_type}' to '${defaults.calculation_type}'`);
-        component.calculation_type = defaults.calculation_type;
-        // When calculation_type changes, amount and percentage should be reset according to the new type
+      if (component.calculationType !== defaults.calculationType) {
+        console.log(`Updating calculationType for existing SalaryComponent '${component.name}' from '${component.calculationType}' to '${defaults.calculationType}'`);
+        component.calculationType = defaults.calculationType;
+        // When calculationType changes, amount and percentage should be reset according to the new type
         component.amount = defaults.amount;
         component.percentage = defaults.percentage;
         updated = true;
-      } else { // calculation_type is the same, check if amount/percentage needs update
-        if (defaults.calculation_type === 'fixed' && component.amount !== (defaults.amount || null) ) {
+      } else { // calculationType is the same, check if amount/percentage needs update
+        if (defaults.calculationType === 'fixed' && component.amount !== (defaults.amount || null) ) {
             console.log(`Updating amount for existing 'fixed' SalaryComponent '${component.name}' from '${component.amount}' to '${defaults.amount || null}'`);
             component.amount = defaults.amount || null;
             updated = true;
         }
-        if (defaults.calculation_type === 'percentage' && component.percentage !== (defaults.percentage || null) ) {
+        if (defaults.calculationType === 'percentage' && component.percentage !== (defaults.percentage || null) ) {
             console.log(`Updating percentage for existing 'percentage' SalaryComponent '${component.name}' from '${component.percentage}' to '${defaults.percentage || null}'`);
             component.percentage = defaults.percentage || null;
             updated = true;
@@ -521,8 +521,8 @@ async function seedPaySchedules() {
         name: psData.name,
         tenantId: tenant.id,
         frequency: psData.frequency,
-        pay_day_of_month: psData.pay_day_of_month || null,
-        pay_period_start_day: psData.pay_period_start_day || null,
+        payDayOfMonth: psData.payDayOfMonth || null,
+        payPeriodStartDay: psData.payPeriodStartDay || null,
       },
     });
     psData.instance = schedule;
