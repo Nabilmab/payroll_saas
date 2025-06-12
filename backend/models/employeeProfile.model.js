@@ -29,6 +29,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
       unique: true, // Crucial for a one-to-one relationship
+      field: 'employee_id', // critical mapping
       references: {
         model: 'employees', // Name of the Employee table
         key: 'id',
@@ -92,6 +93,20 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      field: 'deleted_at',
+    },
     // Other profile information like preferred_pronouns, allergies, etc.
   }, {
     sequelize,
@@ -99,11 +114,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'employee_profiles',
     timestamps: true,   // Enable timestamps (createdAt, updatedAt)
     paranoid: true,     // Enable soft deletes, aligns with Employee model
-    underscored: true,
+    // underscored: true, // REMOVED
     // Model attribute `employeeId` (camelCase) will be mapped to `employee_id` (snake_case)
     // in the DB due to `underscored: true`.
     indexes: [
-      { fields: ['employeeId'], unique: true }
+      { name: 'employee_profiles_employee_id', fields: ['employee_id'], unique: true } // Updated
     ]
   });
 
