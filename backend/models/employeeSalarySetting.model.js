@@ -85,25 +85,25 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true, // To track when this setting was created or last updated
     paranoid: true,   // If you need to keep history of settings even after "deletion"
     underscored: true,
+    // Model attribute names (camelCase) are used in `fields` and `where` clauses.
+    // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
-      { fields: ['tenant_id'] }, // DB column name
-      { fields: ['employee_id'] }, // DB column name
-      { fields: ['salary_component_id'] }, // DB column name
+      { fields: ['tenantId'] },
+      { fields: ['employeeId'] },
+      { fields: ['salaryComponentId'] },
       // Ensures an employee doesn't have the same component active for the same effective date.
       // For true history, you might allow multiple records and pick the latest effective one.
-      // Or, use is_active=false for older records of the same component for an employee.
-      // `effective_date` and `is_active` in fields and where clause refer to DB column names.
-      // Mapping from model attributes (effectiveDate, isActive) handled by underscored: true.
+      // Or, use isActive=false for older records of the same component for an employee.
       {
         unique: true,
-        fields: ['employee_id', 'salary_component_id', 'effective_date'],
+        fields: ['employeeId', 'salaryComponentId', 'effectiveDate'],
         name: 'unique_employee_component_effective_date'
       },
       {
         unique: true,
-        fields: ['employee_id', 'salary_component_id'],
+        fields: ['employeeId', 'salaryComponentId'],
         name: 'unique_employee_active_component',
-        where: { is_active: true } // Allow only one active record for each component per employee
+        where: { isActive: true } // Allow only one active record for each component per employee
       }
     ]
   });

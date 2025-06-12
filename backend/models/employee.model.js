@@ -151,15 +151,14 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     paranoid: true, // Soft deletes for employee records
     underscored: true,
+    // Model attribute names (camelCase) are used in `fields` and `where` clauses.
+    // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
-      { fields: ['tenant_id'] },
-      { fields: ['department_id'] },
-      { fields: ['user_id'] },
-      // Sequelize will map camelCase attribute `email` to `email` column (if not specified otherwise by `field`)
-      // and `tenantId` to `tenant_id` (due to underscored: true) for the index.
-      { unique: true, fields: ['tenant_id', 'email'],  name: 'unique_tenant_employee_email',  where: { email: { [Op.ne]: null } } },
-      // Sequelize will map camelCase attribute `employeeIdAlt` to `employee_id_alt` column (due to underscored: true) for the index.
-      { unique: true, fields: ['tenant_id', 'employee_id_alt'], name: 'unique_tenant_employee_id_alt', where: { employee_id_alt: { [Op.ne]: null } } }
+      { fields: ['tenantId'] },
+      { fields: ['departmentId'] },
+      { fields: ['userId'] },
+      { unique: true, fields: ['tenantId', 'email'],  name: 'unique_tenant_employee_email',  where: { email: { [Op.ne]: null } } },
+      { unique: true, fields: ['tenantId', 'employeeIdAlt'], name: 'unique_tenant_employee_id_alt', where: { employeeIdAlt: { [Op.ne]: null } } }
     ]
   });
 
