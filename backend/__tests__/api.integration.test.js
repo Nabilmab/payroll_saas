@@ -35,6 +35,22 @@ describe('Payroll SaaS API Integration Tests', () => {
 
     // This beforeAll will now work because authentication is successfully mocked for all requests.
     beforeAll(async () => {
+        // --- START OF DEBUG CODE ---
+        try {
+            console.log('--- RUNNING DEBUG QUERY ---');
+            const [results, metadata] = await sequelize.query(`
+                SELECT table_name, column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name IN ('payroll_runs', 'employee_dependents');
+            `);
+            console.log('--- SCHEMA DEBUG RESULTS ---');
+            console.table(results);
+            console.log('--- END OF DEBUG ---');
+        } catch (error) {
+            console.error('--- DEBUG QUERY FAILED ---', error.message);
+            // We don't want to stop the test here, let it fail on its own
+        }
+        // --- END OF DEBUG CODE ---
         // Ensure the database is clean and in a known state
         await sequelize.sync({ force: true });
 
