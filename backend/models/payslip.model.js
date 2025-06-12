@@ -77,16 +77,17 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payslips',
     timestamps: true, // createdAt, updatedAt
     paranoid: true,   // For soft deletes, if payslip history needs to be robustly kept
-    // underscored: true, // Removed for camelCase consistency
+    underscored: true, // Ensuring this is active for snake_case column names
     indexes: [
-      // { fields: ['tenantId'] }, // Updated for camelCase if associations restored
-      // { fields: ['employeeId'] }, // Updated for camelCase if associations restored
-      { fields: ['payrollRunId'] }, // Updated to camelCase
+      // { fields: ['tenantId'] }, // Model attribute, maps to tenant_id if associations restored
+      // { fields: ['employeeId'] }, // Model attribute, maps to employee_id if associations restored
+      { fields: ['payrollRunId'] }, // Model attribute, maps to payroll_run_id
       // A payslip should be unique per employee per payroll run
+      // Model attributes, will be mapped to snake_case for DB index creation by `underscored: true`
       {
         unique: true,
-        fields: ['employeeId', 'payrollRunId'], // Updated to camelCase
-        name: 'unique_employee_payslip_for_run' // Name can remain snake_case
+        fields: ['employeeId', 'payrollRunId'],
+        name: 'unique_employee_payslip_for_run' // Constraint name in DB
       }
     ]
   });

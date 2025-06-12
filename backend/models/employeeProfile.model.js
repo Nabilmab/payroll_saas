@@ -29,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
       unique: true, // Crucial for a one-to-one relationship
-      field: 'employee_id',
       references: {
         model: 'employees', // Name of the Employee table
         key: 'id',
@@ -38,11 +37,11 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'CASCADE', // If the employee record is deleted, their profile is also deleted
     },
     // Address fields
-    address_line1: {
+    addressLine1: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    address_line2: {
+    addressLine2: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -50,11 +49,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    state_province_region: {
+    stateProvinceRegion: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    postal_code: {
+    postalCode: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -63,15 +62,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     // Emergency Contact
-    emergency_contact_name: {
+    emergencyContactName: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    emergency_contact_phone: {
+    emergencyContactPhone: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    emergency_contact_relationship: {
+    emergencyContactRelationship: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -102,7 +101,10 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true,     // Enable soft deletes, aligns with Employee model
     underscored: true,
     indexes: [
-      { fields: ['employee_id'], unique: true } // Redundant due to unique:true on employeeId but good for clarity
+      // employee_id here refers to the DB column name.
+      // Sequelize will map the employeeId attribute (camelCase) to employee_id column (snake_case)
+      // due to `underscored: true`.
+      { fields: ['employee_id'], unique: true }
     ]
   });
 

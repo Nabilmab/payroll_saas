@@ -129,23 +129,17 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payroll_runs', // Keeping original table name
     timestamps: true,
     paranoid: true,
-    // underscored: true, // Removed as per instruction
-                       // but totalGrossPay etc. will be totalGrossPay in DB.
-                       // For consistency, I should probably stick to one naming convention.
-                       // The prompt implies camelCase for attributes, so I'll remove underscored: true
-                       // and ensure DB columns match model field names if that's the intent.
-                       // OR, keep underscored: true and ensure JS names are consistently camelCase.
-                       // I will keep underscored:true for now as it was in the previous version,
-                       // meaning DB columns will be snake_case for fields like periodStart.
+    underscored: true, // Ensuring this is active for snake_case column names
     indexes: [
-      // { fields: ['tenantId'] }, // Updated for camelCase if associations restored
-      // { fields: ['payScheduleId'] }, // Updated for camelCase if associations restored
-      { fields: ['status'] },
-      { fields: ['paymentDate'] }, // Updated to camelCase
+      // { fields: ['tenantId'] }, // Model attribute, maps to tenant_id if associations restored
+      // { fields: ['payScheduleId'] }, // Model attribute, maps to pay_schedule_id if associations restored
+      { fields: ['status'] }, // Model attribute, maps to status
+      { fields: ['paymentDate'] }, // Model attribute, maps to payment_date
       {
         unique: true,
-        fields: ['tenantId', 'payScheduleId', 'periodEnd', 'status'], // Added status field
-        name: 'unique_tenant_schedule_period_run' // Name can remain snake_case as it's a constraint name
+        // Model attributes, will be mapped to snake_case for DB index creation by `underscored: true`
+        fields: ['tenantId', 'payScheduleId', 'periodEnd', 'status'],
+        name: 'unique_tenant_schedule_period_run' // Constraint name in DB
       }
     ]
   });

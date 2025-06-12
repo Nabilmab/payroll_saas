@@ -68,9 +68,10 @@ module.exports = (sequelize, DataTypes) => {
     // If a payslip is soft-deleted, its items effectively are too via FK relationship (when active).
     underscored: true, // For snake_case column names
     indexes: [
-      { fields: ['tenant_id'] }, // Add back if associations are restored
-      { fields: ['payslip_id'] }, // Add back if associations are restored
-      { fields: ['salary_component_id'] }, // Add back if associations are restored
+      // Model attributes, will be mapped to snake_case for DB index creation by `underscored: true`
+      { fields: ['tenantId'] },
+      { fields: ['payslipId'] },
+      { fields: ['salaryComponentId'] },
     ]
     // No specific unique indexes here by default, as a payslip can have multiple items of the same type
     // (e.g., multiple "other" earnings or deductions with different descriptions).

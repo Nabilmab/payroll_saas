@@ -35,7 +35,6 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: { // Foreign key for Tenant
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'tenant_id',
       references: {
         model: 'tenants', // Name of the Tenant table
         key: 'id',
@@ -59,11 +58,12 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,   // Enable timestamps (createdAt, updatedAt)
     paranoid: true,     // Enable soft deletes (deletedAt)
     underscored: true,  // Use snake_case for automatically generated attributes
+    // Ensure `underscored: true` correctly maps tenantId to tenant_id for the index
     indexes: [
       // Add a composite unique key for tenantId and name to ensure department names are unique within a tenant
       {
         unique: true,
-        fields: ['tenant_id', 'name']
+        fields: ['tenant_id', 'name'] // Keep snake_case here as it refers to the database column name
       }
     ]
   });

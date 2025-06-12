@@ -37,25 +37,22 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'tenant_id',
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
     employeeId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'employee_id',
       references: { model: 'employees', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE',
     },
     salaryComponentId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'salary_component_id',
       references: { model: 'salary_components', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'CASCADE', // Or RESTRICT if components shouldn't be deleted if in use
     },
-    effective_date: { // Date from which this setting is effective
+    effectiveDate: { // Date from which this setting is effective
       type: DataTypes.DATEONLY,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -72,7 +69,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     // Note: The actual calculation (e.g. percentage of what) is defined in the SalaryComponent.
     // This table stores the employee-specific value or percentage for that component.
-    is_active: { // To easily enable/disable a component for an employee's salary
+    isActive: { // To easily enable/disable a component for an employee's salary
       type: DataTypes.BOOLEAN,
       defaultValue: true,
       allowNull: false,
@@ -89,12 +86,14 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true,   // If you need to keep history of settings even after "deletion"
     underscored: true,
     indexes: [
-      { fields: ['tenant_id'] },
-      { fields: ['employee_id'] },
-      { fields: ['salary_component_id'] },
+      { fields: ['tenant_id'] }, // DB column name
+      { fields: ['employee_id'] }, // DB column name
+      { fields: ['salary_component_id'] }, // DB column name
       // Ensures an employee doesn't have the same component active for the same effective date.
       // For true history, you might allow multiple records and pick the latest effective one.
       // Or, use is_active=false for older records of the same component for an employee.
+      // `effective_date` and `is_active` in fields and where clause refer to DB column names.
+      // Mapping from model attributes (effectiveDate, isActive) handled by underscored: true.
       {
         unique: true,
         fields: ['employee_id', 'salary_component_id', 'effective_date'],
