@@ -64,7 +64,7 @@ module.exports = (sequelize, DataTypes) => {
       // Add a composite unique key for tenantId and name to ensure department names are unique within a tenant
       {
         unique: true,
-        fields: ['tenantId', 'name'] // Use JS model attribute names (camelCase)
+        fields: ['tenant_id', 'name'] // Use JS model attribute names (camelCase)
       }
     ]
   });
