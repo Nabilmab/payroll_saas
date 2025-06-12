@@ -27,6 +27,7 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'tenant_id', // important!
       references: { model: 'tenants', key: 'id' },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
@@ -34,6 +35,7 @@ module.exports = (sequelize, DataTypes) => {
     employeeId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'employee_id', // important!
       references: { model: 'employees', key: 'id' },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
@@ -70,19 +72,33 @@ module.exports = (sequelize, DataTypes) => {
     notes: {
         type: DataTypes.TEXT,
         allowNull: true,
-    }
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      field: 'deleted_at',
+    },
   }, {
     sequelize,
     modelName: 'EmployeeDependent',
     tableName: 'employee_dependents',
     timestamps: true,
     paranoid: true, // Soft delete for historical records
-    underscored: true,
+    // underscored: true, // REMOVED
     indexes: [
-      { fields: ['tenantId'] }, // Model attribute name, will be mapped to snake_case by underscored: true
-      { fields: ['employeeId'] }, // Model attribute name, will be mapped to snake_case by underscored: true
+      { name: 'employee_dependents_tenant_id', fields: ['tenant_id'] }, // Updated
+      { name: 'employee_dependents_employee_id_idx', fields: ['employee_id'] }, // Updated
       // Model attribute names, will be mapped to snake_case by underscored: true
-      { fields: ['employeeId', 'fullName', 'dateOfBirth'], unique: true, name: 'unique_employee_dependent_profile' }
+      { fields: ['employee_id', 'fullName', 'dateOfBirth'], unique: true, name: 'unique_employee_dependent_profile' } // Updated
     ]
   });
 
