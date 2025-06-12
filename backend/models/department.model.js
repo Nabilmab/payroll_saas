@@ -34,6 +34,7 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: { // Foreign key for Tenant
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'tenant_id', // important
       references: {
         model: 'tenants', // Name of the Tenant table
         key: 'id',
@@ -49,18 +50,32 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      field: 'deleted_at',
+    },
   }, {
     sequelize,
     modelName: 'Department',
     tableName: 'departments',
-    timestamps: true,
-    paranoid: true,
-    underscored: true,
+    timestamps: true, // Sequelize will manage createdAt and updatedAt
+    paranoid: true,   // Enables soft deletes (deletedAt)
+    // underscored: true, // REMOVED - explicit field names are used
     indexes: [
-      // Add a composite unique key for tenantId and name to ensure department names are unique within a tenant
       {
         unique: true,
-        fields: ['tenantId', 'name'] // CORRECTED: Use camelCase model attribute names
+        fields: ['tenant_id', 'name'], // match real column names, not JS names
+        name: 'departments_tenant_id_name' // Added name for the index as per issue example
       }
     ]
   });
