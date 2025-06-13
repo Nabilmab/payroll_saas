@@ -144,12 +144,12 @@ module.exports = (sequelize, DataTypes) => {
     // Model attribute names (camelCase) are used in `fields`.
     // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
-      { fields: ['tenantId'] },
-      { unique: true, fields: ['tenantId', 'name'], name: 'unique_tenant_salary_component_name' },
+      { fields: ['tenant_id'] },
+      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_salary_component_name' },
       // { fields: ['basedOnComponentId'] }, // basedOnComponentId (model attribute) would map if uncommented
       {
         unique: true,
-        fields: ['tenantId', 'componentCode'], // Model attributes
+        fields: ['tenant_id', 'component_code'], // Model attributes
         name: 'unique_tenant_component_code',
         // where clause referring to componentCode (model attribute) would also be correctly mapped.
       }
