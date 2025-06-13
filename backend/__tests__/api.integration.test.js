@@ -22,7 +22,6 @@ jest.mock('../middleware/auth', () => ({
 }));
 // --- END OF MOCK ---
 
-
 // Use a consistent API_BASE_URL (it's good practice, though not strictly needed if 'app' is used directly)
 const API_BASE_URL = 'http://localhost:3001';
 
@@ -33,7 +32,6 @@ describe('Payroll SaaS API Integration Tests', () => {
     let khalidBennaniDependentId;
     let testPayslipId;
 
-    // This beforeAll will now work because authentication is successfully mocked for all requests.
     beforeAll(async () => {
         // --- START OF DEBUG CODE ---
         try {
@@ -51,9 +49,12 @@ describe('Payroll SaaS API Integration Tests', () => {
             // We don't want to stop the test here, let it fail on its own
         }
         // --- END OF DEBUG CODE ---
-        // Ensure the database is clean and in a known state
-        await sequelize.drop();
-        await sequelize.query('CREATE SCHEMA IF NOT EXISTS techsolutions;');
+
+        // Drop and recreate the schema manually
+        await sequelize.query('DROP SCHEMA IF EXISTS techsolutions CASCADE');
+        await sequelize.query('CREATE SCHEMA IF NOT EXISTS techsolutions');
+
+        // Sync models to the schema
         await sequelize.sync({ force: true });
 
         // Seed data
@@ -64,12 +65,12 @@ describe('Payroll SaaS API Integration Tests', () => {
         const rhDepartment = await Department.create({ name: "Ressources Humaines", tenantId: techSolutionsTenantId });
         const itDepartment = await Department.create({ name: "Technologie de l'Information", tenantId: techSolutionsTenantId });
 
-    const monthlySchedule = await PaySchedule.create({
-        name: "Mensuel",
-        frequency: "monthly",
-        effectiveDate: new Date(),
-        tenantId: techSolutionsTenantId
-    });
+        const monthlySchedule = await PaySchedule.create({
+            name: "Mensuel",
+            frequency: "monthly",
+            payDayOfMonth: 28, // Added missing required-like field
+            tenantId: techSolutionsTenantId
+        });
 
         const ahmed = await Employee.create({
             firstName: "Ahmed",
@@ -78,8 +79,7 @@ describe('Payroll SaaS API Integration Tests', () => {
             jobTitle: "Développeur Principal",
             departmentId: itDepartment.id,
             tenantId: techSolutionsTenantId,
-            payScheduleId: monthlySchedule.id
-            // Note: payScheduleId might be needed here if present in Employee model
+            // payScheduleId: monthlySchedule.id // This field doesn't exist on Employee model
         });
         ahmedBennaniEmployeeId = ahmed.id;
 
@@ -88,31 +88,30 @@ describe('Payroll SaaS API Integration Tests', () => {
             relationship: "child",
             dateOfBirth: "2010-05-15",
             isFiscallyDependent: true,
-            effectiveStartDate: new Date(), // Corrected from effective_start_date
+            effectiveStartDate: new Date(),
             employeeId: ahmedBennaniEmployeeId,
             tenantId: techSolutionsTenantId
         });
         khalidBennaniDependentId = khalid.id;
 
-        // ... (rest of your seeding logic, which should now run correctly)
         const payrollRun = await PayrollRun.create({
-          periodStart: '2023-01-01',
-          periodEnd: '2023-01-31',
-          paymentDate: '2023-02-05',
-          status: 'paid',
-          tenantId: techSolutionsTenantId,
-          payScheduleId: monthlySchedule.id
+            periodStart: '2023-01-01',
+            periodEnd: '2023-01-31',
+            paymentDate: '2023-02-05',
+            status: 'paid',
+            tenantId: techSolutionsTenantId,
+            payScheduleId: monthlySchedule.id
         });
 
         const payslip = await Payslip.create({
-          grossPay: 5000,
-          netPay: 4000,
-          deductions: 800,
-          taxes: 200,
-          notes: 'Payslip de test pour Janvier',
-          payrollRunId: payrollRun.id,
-          employeeId: ahmedBennaniEmployeeId,
-          tenantId: techSolutionsTenantId,
+            grossPay: 5000,
+            netPay: 4000,
+            deductions: 800,
+            taxes: 200,
+            notes: 'Payslip de test pour Janvier',
+            payrollRunId: payrollRun.id,
+            employeeId: ahmedBennaniEmployeeId,
+            tenantId: techSolutionsTenantId,
         });
         testPayslipId = payslip.id;
     });
@@ -122,16 +121,13 @@ describe('Payroll SaaS API Integration Tests', () => {
         await sequelize.close();
     });
 
-    // ... Your tests should now pass ...
-    // Example test:
     describe('Employee Dependents API', () => {
         it('POST /api/employees/:employeeId/dependents - should create a new dependent successfully', async () => {
-             const newDependentPayload = {
+            const newDependentPayload = {
                 fullName: "Fatima Bennani",
                 relationship: "child",
                 dateOfBirth: "2012-08-20",
                 isFiscallyDependent: true
-                // Note: effectiveStartDate might be relevant here if required by model/controller
             };
 
             // Use the app directly with request
@@ -141,10 +137,8 @@ describe('Payroll SaaS API Integration Tests', () => {
 
             expect(response.statusCode).toBe(201);
             expect(response.body).toHaveProperty('id');
-            expect(response.body.full_name).toBe("Fatima Bennani");
+            // FIX: The API response uses camelCase (fullName), not snake_case (full_name).
+            expect(response.body.fullName).toBe("Fatima Bennani");
         });
-
-        // ... ALL YOUR OTHER TESTS ...
-        // You should not need to change the logic inside the individual `it` blocks.
     });
 });

@@ -1,5 +1,3 @@
-// REMOVED: The require('dotenv').config() call from the top of this file.
-
 const express = require('express');
 const cors = require('cors');
 // Only require what's needed for this file.
@@ -9,7 +7,7 @@ const { authenticateAndAttachUser } = require('./middleware/auth');
 // Import routers
 const authRoutes = require('./routes/auth');
 const employeeRoutes = require('./routes/employees');
-const dependentRoutes = require('./routes/dependents');
+// REMOVED: const dependentRoutes = require('./routes/dependents');
 const payrollRoutes = require('./routes/payroll');
 const salaryComponentRoutes = require('./routes/salaryComponents');
 
@@ -23,7 +21,7 @@ app.get('/', (req, res) => res.send('<h1>Payroll SaaS API is running!</h1>'));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', authenticateAndAttachUser, employeeRoutes);
-app.use('/api/dependents', authenticateAndAttachUser, dependentRoutes);
+// REMOVED: app.use('/api/dependents', authenticateAndAttachUser, dependentRoutes);
 app.use('/api', authenticateAndAttachUser, payrollRoutes);
 app.use('/api/salary-components', authenticateAndAttachUser, salaryComponentRoutes);
 

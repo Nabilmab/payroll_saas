@@ -85,15 +85,15 @@ module.exports = (sequelize, DataTypes) => {
     paranoid: true,   // For soft deletes, if payslip history needs to be robustly kept
     underscored: true, // This correctly maps JS camelCase to DB snake_case
     indexes: [
-      // Sequelize will correctly map these camelCase fields to snake_case for the index creation
-      { fields: ['tenantId'] },
-      { fields: ['employeeId'] },
-      { fields: ['payrollRunId'] },
+      // FIX: Use snake_case column names when `underscored: true` is set.
+      { fields: ['tenant_id'] },
+      { fields: ['employee_id'] },
+      { fields: ['payroll_run_id'] },
 
       // A payslip should be unique per employee per payroll run
       {
         unique: true,
-        fields: ['employeeId', 'payrollRunId'],
+        fields: ['employee_id', 'payroll_run_id'],
         name: 'unique_employee_payslip_for_run'
       }
     ]

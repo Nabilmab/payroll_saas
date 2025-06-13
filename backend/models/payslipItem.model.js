@@ -32,7 +32,8 @@ module.exports = (sequelize, DataTypes) => {
     payslipId: {
       type: DataTypes.UUID,
       allowNull: false,
-      // references: { model: 'payslips', key: 'id' }, // No associations
+      // FIX: Enabled the foreign key constraint for data integrity.
+      references: { model: 'payslips', key: 'id' },
     },
     salaryComponentId: {
       type: DataTypes.UUID,
@@ -68,10 +69,10 @@ module.exports = (sequelize, DataTypes) => {
     // If a payslip is soft-deleted, its items effectively are too via FK relationship (when active).
     underscored: true, // For snake_case column names
     indexes: [
-      // Model attributes, will be mapped to snake_case for DB index creation by `underscored: true`
-      { fields: ['tenantId'] },
-      { fields: ['payslipId'] },
-      { fields: ['salaryComponentId'] },
+      // FIX: Use snake_case column names when `underscored: true` is set.
+      { fields: ['tenant_id'] },
+      { fields: ['payslip_id'] },
+      { fields: ['salary_component_id'] },
     ]
     // No specific unique indexes here by default, as a payslip can have multiple items of the same type
     // (e.g., multiple "other" earnings or deductions with different descriptions).

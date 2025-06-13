@@ -88,22 +88,22 @@ module.exports = (sequelize, DataTypes) => {
     // Model attribute names (camelCase) are used in `fields` and `where` clauses.
     // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
-      { fields: ['tenantId'] },
-      { fields: ['employeeId'] },
-      { fields: ['salaryComponentId'] },
+      { fields: ['tenant_id'] },
+      { fields: ['employee_id'] },
+      { fields: ['salary_component_id'] },
       // Ensures an employee doesn't have the same component active for the same effective date.
       // For true history, you might allow multiple records and pick the latest effective one.
       // Or, use isActive=false for older records of the same component for an employee.
       {
         unique: true,
-        fields: ['employeeId', 'salaryComponentId', 'effectiveDate'],
+        fields: ['employee_id', 'salary_component_id', 'effective_date'],
         name: 'unique_employee_component_effective_date'
       },
       {
         unique: true,
-        fields: ['employeeId', 'salaryComponentId'],
+        fields: ['employee_id', 'salary_component_id'],
         name: 'unique_employee_active_component',
-        where: { isActive: true } // Allow only one active record for each component per employee
+        where: { is_active: true } // Allow only one active record for each component per employee
       }
     ]
   });

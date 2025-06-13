@@ -71,7 +71,8 @@ module.exports = (sequelize, DataTypes) => {
       // Add a composite unique key for tenantId and name to ensure role names are unique within a tenant
       {
         unique: true,
-        fields: ['tenantId', 'name']
+        // FIX: Use snake_case column names when `underscored: true` is set.
+        fields: ['tenant_id', 'name']
       }
     ]
   });

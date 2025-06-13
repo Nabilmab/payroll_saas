@@ -5,28 +5,29 @@ const path = require('path');
 const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
-
-// CORRECT: It now points to our config.js file
 const config = require(__dirname + '/../config/config.js')[env];
 const db = {};
 
 let sequelize;
+
+// Initialize Sequelize instance
 if (config.use_env_variable) {
   sequelize = new Sequelize(process.env[config.use_env_variable], config);
-} else if (config.url) { // This is our new "test" environment path
+} else if (config.url) {
   sequelize = new Sequelize(config.url, config);
 } else {
   sequelize = new Sequelize(config.database, config.username, config.password, config);
 }
 
-fs
-  .readdirSync(__dirname)
+// Load all model files
+fs.readdirSync(__dirname)
   .filter(file => {
     return (
       file.indexOf('.') !== 0 &&
       file !== basename &&
-      file.slice(-3) === '.js' &&
-      file.indexOf('.test.js') === -1
+      file.endsWith('.js') &&
+      !file.endsWith('.test.js') &&
+      file.includes('.model.') // Only load model definition files
     );
   })
   .forEach(file => {
@@ -34,6 +35,7 @@ fs
     db[model.name] = model;
   });
 
+// Run all associations
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);
