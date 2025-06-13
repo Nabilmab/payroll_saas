@@ -52,6 +52,8 @@ describe('Payroll SaaS API Integration Tests', () => {
         }
         // --- END OF DEBUG CODE ---
         // Ensure the database is clean and in a known state
+        await sequelize.drop();
+        await sequelize.query('CREATE SCHEMA IF NOT EXISTS techsolutions;');
         await sequelize.sync({ force: true });
 
         // Seed data
