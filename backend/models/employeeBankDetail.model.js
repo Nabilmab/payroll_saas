@@ -67,8 +67,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     accountType: { // E.g., 'checking', 'savings'
-      type: DataTypes.ENUM('checking', 'savings', 'other'),
+      type: DataTypes.STRING,
       allowNull: true,
+      validate: {
+        isIn: [['checking', 'savings', 'other']],
+      },
     },
     currency: { // e.g., USD, EUR
       type: DataTypes.STRING,
@@ -105,11 +108,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'employee_bank_details',
     timestamps: true,
     paranoid: true, // Soft delete might be required for audit trails
-    // underscored: true, // REMOVED
+    underscored: true,
     // Model attribute `employeeId` (camelCase) will be mapped to `employee_id` (snake_case)
     // in the DB due to `underscored: true`.
     indexes: [
-      { name: 'employee_bank_details_employee_id', fields: ['employee_id'] } // Updated
+      { name: 'employee_bank_details_employee_id', fields: ['employeeId'] } // Updated
       // An employee might have multiple bank accounts, so employeeId is not unique here alone.
       // A combination of employeeId and accountNumber (if decrypted) might be unique,
       // but enforcing uniqueness on encrypted data is tricky at DB level.

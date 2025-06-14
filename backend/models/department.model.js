@@ -70,11 +70,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'departments',
     timestamps: true, // Sequelize will manage createdAt and updatedAt
     paranoid: true,   // Enables soft deletes (deletedAt)
-    // underscored: true, // REMOVED - explicit field names are used
+    underscored: true,
     indexes: [
       {
         unique: true,
-        fields: ['tenant_id', 'name'], // match real column names, not JS names
+        fields: ['tenantId', 'name'], // match real column names, not JS names
         name: 'departments_tenant_id_name' // Added name for the index as per issue example
       }
     ]
