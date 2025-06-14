@@ -50,8 +50,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     frequency: { // Defines the pay period frequency
-      type: DataTypes.ENUM('weekly', 'bi_weekly', 'semi_monthly', 'monthly', 'custom'),
+      type: DataTypes.STRING,
       allowNull: false,
+      validate: {
+        isIn: [['weekly', 'bi_weekly', 'semi_monthly', 'monthly', 'custom']],
+      },
     },
     // For weekly/bi-weekly
     payPeriodStartDay: { // e.g., 1 (Monday) to 7 (Sunday) for weekly/bi-weekly
@@ -110,10 +113,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'pay_schedules',
     timestamps: true,
     paranoid: true,
-    // underscored: true, // REMOVED
+    underscored: true,
     indexes: [
-      { name: 'pay_schedules_tenant_id_idx', fields: ['tenant_id'] }, // Updated
-      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_payschedule_name' } // Updated
+      { name: 'pay_schedules_tenant_id_idx', fields: ['tenantId'] }, // Updated
+      { unique: true, fields: ['tenantId', 'name'], name: 'unique_tenant_payschedule_name' } // Updated
     ]
   });
 

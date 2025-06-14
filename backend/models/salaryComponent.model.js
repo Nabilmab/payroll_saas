@@ -62,13 +62,19 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     type: { // Earning or Deduction
-      type: DataTypes.ENUM('earning', 'deduction'),
+      type: DataTypes.STRING,
       allowNull: false,
+      validate: {
+        isIn: [['earning', 'deduction']],
+      },
     },
     calculationType: { // How the component value is determined
-      type: DataTypes.ENUM('fixed', 'percentage', 'formula'), // 'formula' might need custom logic
+      type: DataTypes.STRING, // 'formula' might need custom logic
       allowNull: false,
       defaultValue: 'fixed',
+      validate: {
+        isIn: [['fixed', 'percentage', 'formula']],
+      },
     },
     amount: { // Fixed amount for 'fixed' type, or default/base amount.
       type: DataTypes.DECIMAL(12, 2), // Precision 12, 2 decimal places
@@ -116,9 +122,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true, // Can be null for tenant-defined components
     },
     category: {
-      type: DataTypes.ENUM('employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'employee_earning',
+      validate: {
+        isIn: [['employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction']],
+      },
     },
     isCnssSubject: { // Does this component contribute to the CNSS taxable base?
       type: DataTypes.BOOLEAN,
@@ -144,12 +153,12 @@ module.exports = (sequelize, DataTypes) => {
     // Model attribute names (camelCase) are used in `fields`.
     // Sequelize, with `underscored: true`, maps these to snake_case DB column names.
     indexes: [
-      { fields: ['tenant_id'] },
-      { unique: true, fields: ['tenant_id', 'name'], name: 'unique_tenant_salary_component_name' },
+      { fields: ['tenantId'] },
+      { unique: true, fields: ['tenantId', 'name'], name: 'unique_tenant_salary_component_name' },
       // { fields: ['basedOnComponentId'] }, // basedOnComponentId (model attribute) would map if uncommented
       {
         unique: true,
-        fields: ['tenant_id', 'component_code'], // Model attributes
+        fields: ['tenantId', 'componentCode'], // Model attributes
         name: 'unique_tenant_component_code',
         // where clause referring to componentCode (model attribute) would also be correctly mapped.
       }
