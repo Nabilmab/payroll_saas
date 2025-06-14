@@ -46,7 +46,6 @@ module.exports = (sequelize, DataTypes) => {
         as: 'payslips'
       });
 
-      // FIX: Add the missing association
       Employee.hasMany(models.EmployeeSalarySetting, {
         foreignKey: 'employeeId',
         as: 'employeeSalarySettings',
@@ -71,6 +70,7 @@ module.exports = (sequelize, DataTypes) => {
     departmentId: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'department_id', // Add field mapping for consistency
       references: { model: 'departments', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
@@ -78,20 +78,24 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true,
       unique: true,
+      field: 'user_id', // Add field mapping
       references: { model: 'users', key: 'id' },
       onUpdate: 'CASCADE', onDelete: 'SET NULL',
     },
     employeeIdAlt: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'employee_id_alt',
     },
     firstName: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'first_name',
     },
     lastName: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'last_name',
     },
     email: {
       type: DataTypes.STRING,
@@ -101,6 +105,7 @@ module.exports = (sequelize, DataTypes) => {
     phoneNumber: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'phone_number',
     },
     address: {
       type: DataTypes.STRING,
@@ -109,27 +114,40 @@ module.exports = (sequelize, DataTypes) => {
     jobTitle: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'job_title',
     },
     dateOfBirth: {
       type: DataTypes.DATEONLY,
       allowNull: true,
+      field: 'date_of_birth',
     },
     hireDate: {
       type: DataTypes.DATEONLY,
       allowNull: true,
+      field: 'hire_date',
     },
     terminationDate: {
       type: DataTypes.DATEONLY,
       allowNull: true,
+      field: 'termination_date',
     },
+    // --- THIS IS THE FIX ---
     status: {
-      type: DataTypes.ENUM('active', 'on_leave', 'terminated', 'pending_hire'),
+      type: DataTypes.STRING, // Changed from ENUM
       defaultValue: 'pending_hire',
       allowNull: false,
+      validate: {
+        isIn: {
+          args: [['active', 'on_leave', 'terminated', 'pending_hire']],
+          msg: "Status must be one of: active, on_leave, terminated, pending_hire"
+        }
+      }
     },
+    // --- END OF FIX ---
     reportingManagerId: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'reporting_manager_id', // Add field mapping
       references: {
         model: 'employees',
         key: 'id',
@@ -157,12 +175,14 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'employees',
     timestamps: true,
     paranoid: true,
+    // Add underscored: true to automatically map camelCase model fields to snake_case table columns.
+    underscored: true,
     indexes: [
       { name: 'employees_tenant_id_idx', fields: ['tenant_id'] },
-      { fields: ['departmentId'] },
-      { fields: ['userId'] },
+      { name: 'employees_department_id_idx', fields: ['department_id'] }, // Use snake_case
+      { name: 'employees_user_id_idx', fields: ['user_id'] }, // Use snake_case
       { unique: true, fields: ['tenant_id', 'email'], name: 'unique_tenant_employee_email', where: { email: { [Op.ne]: null } } },
-      { unique: true, fields: ['tenant_id', 'employeeIdAlt'], name: 'unique_tenant_employee_id_alt', where: { employeeIdAlt: { [Op.ne]: null } } }
+      { unique: true, fields: ['tenant_id', 'employee_id_alt'], name: 'unique_tenant_employee_id_alt', where: { employee_id_alt: { [Op.ne]: null } } }
     ]
   });
 
