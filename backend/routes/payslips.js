@@ -1,83 +1,60 @@
-// --- START OF NEW FILE ---
-// ---
 // backend/routes/payslips.js
-// ---
-const express = require('express');
+import express from 'express';
+import prisma from '../lib/prisma.js';
+import validator from 'validator';
+
 const router = express.Router();
-const { Employee, Payslip, PayrollRun, PayslipItem, SalaryComponent, Department, sequelize } = require('../models');
-const validator = require('validator');
 
-// @route   GET /api/payslips/for-run/:runId
-// @desc    Get all payslips for a specific payroll run
-// @access  Private
+// GET /api/payslips/for-run/:runId
 router.get('/for-run/:runId', async (req, res) => {
+    const { tenantId } = req.user;
+    const { runId } = req.params;
+    if (!validator.isUUID(runId)) return res.status(400).json({ error: 'Invalid run ID format.' });
+
     try {
-        const { tenantId } = req.user;
-        const { runId } = req.params;
+        const payrollRun = await prisma.payrollRun.findFirst({ where: { id: runId, tenantId } });
+        if (!payrollRun) return res.status(404).json({ error: 'Payroll run not found or access denied.' });
 
-        if (!validator.isUUID(runId)) {
-            return res.status(400).json({ error: 'Invalid run ID format.' });
-        }
-
-        const payrollRun = await PayrollRun.findOne({ where: { id: runId, tenantId } });
-        if (!payrollRun) {
-            return res.status(404).json({ error: 'Payroll run not found or access denied.' });
-        }
-
-        const payslips = await Payslip.findAll({
+        const payslips = await prisma.payslip.findMany({
             where: { payrollRunId: runId, tenantId },
-            include: [
-                { model: Employee, as: 'employee', attributes: ['id', 'firstName', 'lastName', 'jobTitle'] },
-                { model: PayrollRun, as: 'payrollRun' } // Include run details with each payslip
-            ],
-            order: [[{ model: Employee, as: 'employee' }, 'lastName', 'ASC']]
+            include: {
+                employee: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
+                payrollRun: true
+            },
+            orderBy: { employee: { lastName: 'asc' } }
         });
         res.json(payslips);
-    } catch (error) {
-        console.error(`Error fetching payslips for run ${req.params.runId}:`, error);
+    } catch (err) {
+        console.error(`Error fetching payslips for run ${runId}:`, err);
         res.status(500).json({ error: 'Failed to fetch payslips for run.' });
     }
 });
 
-
-// @route   GET /api/payslips/:payslipId
-// @desc    Get details for a single payslip
-// @access  Private
+// GET /api/payslips/:payslipId
 router.get('/:payslipId', async (req, res) => {
+    const { tenantId } = req.user;
+    const { payslipId } = req.params;
+    if (!validator.isUUID(payslipId)) return res.status(400).json({ error: 'Invalid payslip ID format.' });
+
     try {
-        const { tenantId } = req.user;
-        const { payslipId } = req.params;
-
-        if (!validator.isUUID(payslipId)) {
-            return res.status(400).json({ error: 'Invalid payslip ID format.' });
-        }
-
-        const payslip = await Payslip.findOne({
+        const payslip = await prisma.payslip.findFirst({
             where: { id: payslipId, tenantId },
-            include: [
-                { model: Employee, as: 'employee', include: [{ model: Department, as: 'department', attributes: ['name'] }] },
-                { model: PayrollRun, as: 'payrollRun' },
-                {
-                    model: PayslipItem,
-                    as: 'payslipItems',
-                    include: [{ model: SalaryComponent, as: 'salaryComponent' }]
+            include: {
+                employee: { include: { department: { select: { name: true } } } },
+                payrollRun: true,
+                payslipItems: {
+                    include: { salaryComponent: true },
+                    orderBy: { salaryComponent: { payslipDisplayOrder: 'asc' } }
                 }
-            ],
-            order: [
-                [sequelize.literal('"payslipItems->salaryComponent"."payslipDisplayOrder" ASC NULLS LAST')],
-                [{ model: PayslipItem, as: 'payslipItems' }, 'type', 'ASC'],
-                [{ model: PayslipItem, as: 'payslipItems' }, 'createdAt', 'ASC']
-            ]
+            }
         });
 
-        if (!payslip) {
-            return res.status(404).json({ error: 'Payslip not found or access denied.' });
-        }
+        if (!payslip) return res.status(404).json({ error: 'Payslip not found or access denied.' });
         res.json(payslip);
-    } catch (error) {
-        console.error(`Error fetching payslip ${req.params.payslipId}:`, error);
+    } catch (err) {
+        console.error(`Error fetching payslip ${payslipId}:`, err);
         res.status(500).json({ error: 'Failed to fetch payslip.' });
     }
 });
 
-module.exports = router;
+export default router;

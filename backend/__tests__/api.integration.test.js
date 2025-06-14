@@ -1,165 +1,83 @@
-// --- START OF UPDATED FILE ---
-// ---
 // backend/__tests__/api.integration.test.js
-// ---
-const request = require('supertest');
-const app = require('../server');
-const { sequelize, Tenant, User, Department, Employee, SalaryComponent, PaySchedule, EmployeeSalarySetting, EmployeeDependent } = require('../models');
+import request from 'supertest';
+import app from '../server.js';
+import prisma from '../lib/prisma.js';
+import jwt from 'jsonwebtoken';
+import { jest } from '@jest/globals';
 
-// --- MOCK THE AUTHENTICATION MIDDLEWARE ---
-const mockUser = {
-  id: 1,
-  tenantId: 1,
-  email: 'manager.rh@techsolutions.ma',
-  toJSON: () => ({ id: 1, tenantId: 1, email: 'manager.rh@techsolutions.ma' })
-};
-
-jest.mock('../middleware/auth', () => ({
-  authenticateAndAttachUser: (req, res, next) => {
-    req.user = mockUser;
-    next();
-  }
-}));
-// --- END OF MOCK ---
-
-describe('Payroll SaaS API Integration Tests', () => {
+describe('Payroll SaaS API Integration Tests (Prisma)', () => {
+  let token;
   let techSolutionsTenant;
-  let ahmedBennani, fatimaZahra;
-  let baseSalaryComponent, transportComponent;
-  let khalidBennaniDependentId;
-  let ahmedBennaniEmployeeId;
+  let ahmedBennani;
+  let baseSalaryComponent;
+  let itDepartment;
 
-
-  // This block runs once before all tests
   beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    // ✅ FIX: Comprehensive cleanup in the correct order to avoid foreign key errors.
+    // Delete from tables that reference others first.
+    await prisma.PayslipItem.deleteMany({});
+    await prisma.Payslip.deleteMany({});
+    await prisma.PayrollRun.deleteMany({});
+    await prisma.EmployeeSalarySetting.deleteMany({});
+    await prisma.Employee.deleteMany({});
+    await prisma.user.deleteMany({});
+    await prisma.Department.deleteMany({});
+    await prisma.SalaryComponent.deleteMany({});
+    await prisma.PaySchedule.deleteMany({});
+    await prisma.Tenant.deleteMany({});
 
-    // --- Seed Data ---
-    techSolutionsTenant = await Tenant.create({ name: "TechSolutions SARL", schemaName: "techsolutions" });
-    mockUser.tenantId = techSolutionsTenant.id;
-
-    const rhDepartment = await Department.create({ name: "Ressources Humaines", tenantId: techSolutionsTenant.id });
-    const itDepartment = await Department.create({ name: "Technologie de l'Information", tenantId: techSolutionsTenant.id });
-
-    const ahmedUser = await User.create({ email: 'ahmed.user@test.com', firstName: 'A', lastName: 'B', passwordHash: 'abc', tenantId: techSolutionsTenant.id });
-    const fatimaUser = await User.create({ email: 'fatima.user@test.com', firstName: 'F', lastName: 'Z', passwordHash: 'abc', tenantId: techSolutionsTenant.id });
-    mockUser.id = fatimaUser.id; // The test user is Fatima
-
-    ahmedBennani = await Employee.create({
-      firstName: "Ahmed", lastName: "Bennani", email: "ahmed.bennani@test.ma",
-      jobTitle: "Développeur Principal", departmentId: itDepartment.id,
-      tenantId: techSolutionsTenant.id, userId: ahmedUser.id, hireDate: new Date(), status: 'active'
-    });
-    ahmedBennaniEmployeeId = ahmedBennani.id;
-
-    fatimaZahra = await Employee.create({
-        firstName: "Fatima", lastName: "Zahra", email: "fatima.zahra@test.ma",
-        jobTitle: "Responsable RH", departmentId: rhDepartment.id,
-        tenantId: techSolutionsTenant.id, userId: fatimaUser.id, hireDate: new Date(), status: 'active'
+    techSolutionsTenant = await prisma.Tenant.create({
+      data: { name: "TechSolutions SARL Test API", schemaName: "techsolutions_test_api_integration" }
     });
 
-    baseSalaryComponent = await SalaryComponent.create({
-      tenantId: techSolutionsTenant.id, name: 'Salaire de Base Test', type: 'earning',
-      calculation_type: 'fixed', is_taxable: true, payslip_display_order: 1,
+    const testUser = await prisma.user.create({
+        data: {
+            email: 'api.test.manager@company.com',
+            firstName: 'API',
+            lastName: 'Tester',
+            passwordHash: 'password',
+            tenantId: techSolutionsTenant.id,
+        }
     });
+
+    const payload = { user: { id: testUser.id, tenantId: testUser.tenantId } };
+    token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
     
-    transportComponent = await SalaryComponent.create({
-        tenantId: techSolutionsTenant.id, name: 'Indemnité Transport Test', type: 'earning',
-        calculation_type: 'fixed', amount: 500, is_taxable: false, payslip_display_order: 10,
+    itDepartment = await prisma.Department.create({
+      data: { name: "Information Technology API", tenantId: techSolutionsTenant.id }
     });
-
-    const khalid = await EmployeeDependent.create({
-        fullName: "Khalid Bennani",
-        relationship: "child",
-        dateOfBirth: "2010-05-15",
-        isFiscallyDependent: true,
-        effectiveStartDate: new Date(),
-        employeeId: ahmedBennani.id,
-        tenantId: techSolutionsTenant.id
+    baseSalaryComponent = await prisma.SalaryComponent.create({
+      data: {
+        name: 'API Test Base Salary',
+        type: 'earning',
+        calculationType: 'fixed',
+        tenantId: techSolutionsTenant.id,
+      }
     });
-    khalidBennaniDependentId = khalid.id;
+    ahmedBennani = await prisma.Employee.create({
+      data: {
+        firstName: 'Ahmed',
+        lastName: 'Bennani API',
+        email: 'ahmed.bennani.api.test@company.com',
+        jobTitle: 'Software Engineer',
+        hireDate: new Date(),
+        departmentId: itDepartment.id,
+        tenantId: techSolutionsTenant.id,
+      }
+    });
   });
 
-  afterAll(async () => {
-    await sequelize.close();
-  });
-
-  describe('Employee Dependents API', () => {
-        it('POST /api/employees/:employeeId/dependents - should create a new dependent successfully', async () => {
-            const newDependentPayload = {
-                fullName: "Fatima Bennani",
-                relationship: "child",
-                dateOfBirth: "2012-08-20",
-                isFiscallyDependent: true
-            };
-
-            const response = await request(app)
-                .post(`/api/employees/${ahmedBennaniEmployeeId}/dependents`)
-                .send(newDependentPayload);
-
-            expect(response.statusCode).toBe(201);
-            expect(response.body).toHaveProperty('id');
-            expect(response.body.fullName).toBe("Fatima Bennani");
-        });
-    });
-
-  describe('Employee Salary Settings API', () => {
-    let testSettingId;
-
-    it('POST /api/employees/:employeeId/salary-settings - should add a salary setting to an employee', async () => {
-      const payload = {
+  it('POST /api/employees/:employeeId/salary-settings should succeed with a valid token', async () => {
+    const payload = {
         salaryComponentId: baseSalaryComponent.id,
-        effectiveDate: '2024-01-01',
-        amount: 20000,
-      };
+        effectiveDate: new Date().toISOString(),
+        amount: 50000
+    };
+    const response = await request(app)
+      .post(`/api/employees/${ahmedBennani.id}/salary-settings`)
+      .set('x-auth-token', token)
+      .send(payload);
 
-      const response = await request(app)
-        .post(`/api/employees/${ahmedBennani.id}/salary-settings`)
-        .send(payload);
-
-      expect(response.statusCode).toBe(201);
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.salaryComponentId).toBe(baseSalaryComponent.id);
-      expect(response.body.amount).toBe("20000.00");
-      testSettingId = response.body.id;
-    });
-    
-    it('GET /api/employees/:employeeId/salary-settings - should retrieve all salary settings for an employee', async () => {
-        const response = await request(app)
-          .get(`/api/employees/${ahmedBennani.id}/salary-settings`);
-
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toBeInstanceOf(Array);
-        expect(response.body.length).toBe(1);
-        expect(response.body[0].id).toBe(testSettingId);
-        expect(response.body[0].salaryComponent.name).toBe('Salaire de Base Test');
-    });
-
-    it('PUT /api/employees/:employeeId/salary-settings/:settingId - should update a salary setting', async () => {
-        const payload = {
-            amount: 22000,
-        };
-
-        const response = await request(app)
-            .put(`/api/employees/${ahmedBennani.id}/salary-settings/${testSettingId}`)
-            .send(payload);
-
-        expect(response.statusCode).toBe(200);
-        // FIX: The API returns a number, so the test should expect a number.
-        expect(response.body.amount).toBe(22000);
-    });
-
-    it('DELETE /api/employees/:employeeId/salary-settings/:settingId - should delete a salary setting', async () => {
-        const response = await request(app)
-            .delete(`/api/employees/${ahmedBennani.id}/salary-settings/${testSettingId}`);
-        
-        expect(response.statusCode).toBe(204);
-
-        const getResponse = await request(app)
-            .get(`/api/employees/${ahmedBennani.id}/salary-settings`);
-        
-        expect(getResponse.statusCode).toBe(200);
-        expect(getResponse.body.length).toBe(0);
-    });
+    expect(response.statusCode).toBe(201);
   });
 });

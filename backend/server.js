@@ -1,51 +1,51 @@
-// --- START OF UPDATED FILE ---
-// ---
 // backend/server.js
-// ---
-const express = require('express');
-const cors = require('cors');
-const { sequelize } = require('./models');
-const { authenticateAndAttachUser } = require('./middleware/auth');
+import express from 'express';
+import cors from 'cors';
+// --- START OF FIX ---
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Import routers
-const authRoutes = require('./routes/auth');
-const employeeRoutes = require('./routes/employees');
-const departmentRoutes = require('./routes/departments');
-const salaryComponentRoutes = require('./routes/salaryComponents');
-const payrollRunRoutes = require('./routes/payrollRuns');
-const payScheduleRoutes = require('./routes/paySchedules');
-const payslipRoutes = require('./routes/payslips'); // We will use this for payslip-specific routes
+// Robustly load .env file from the 'backend' directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+// --- END OF FIX ---
+import { authenticateAndAttachUser } from './middleware/auth.js';
+
+// --- Import Routers ---
+import authRoutes from './routes/auth.js';
+import employeeRoutes from './routes/employees.js';
+import departmentRoutes from './routes/departments.js';
+import salaryComponentRoutes from './routes/salaryComponents.js';
+import payrollRunRoutes from './routes/payrollRuns.js';
+import payScheduleRoutes from './routes/paySchedules.js';
+import payslipRoutes from './routes/payslips.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- Middleware & Routes ---
+// --- Middleware & Global Routes ---
 app.use(cors());
 app.use(express.json());
-app.get('/', (req, res) => res.send('<h1>Payroll SaaS API is running!</h1>'));
+app.get('/', (req, res) => res.send('<h1>Payroll SaaS API is running! (Powered by Prisma)</h1>'));
 
+// --- API Routes ---
+// Public routes
 app.use('/api/auth', authRoutes);
-app.use('/api/employees', authenticateAndAttachUser, employeeRoutes);
+
+// Protected routes (all use the authentication middleware)
 app.use('/api/departments', authenticateAndAttachUser, departmentRoutes);
+app.use('/api/employees', authenticateAndAttachUser, employeeRoutes);
 app.use('/api/salary-components', authenticateAndAttachUser, salaryComponentRoutes);
 app.use('/api/payroll-runs', authenticateAndAttachUser, payrollRunRoutes);
 app.use('/api/pay-schedules', authenticateAndAttachUser, payScheduleRoutes);
-app.use('/api/payslips', authenticateAndAttachUser, payslipRoutes); // Use the new specific route
+app.use('/api/payslips', authenticateAndAttachUser, payslipRoutes);
 
 // --- Server Startup Logic ---
-const startServer = async () => {
-  if (require.main === module) {
-    try {
-      await sequelize.authenticate();
-      console.log('✅ Database connection is successful.');
-      app.listen(PORT, () => console.log(`🚀 Server is listening on http://localhost:${PORT}`));
-    } catch (error) {
-      console.error('❌ Unable to start server:', error);
-      process.exit(1);
-    }
-  }
-};
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => console.log(`🚀 Server is listening on http://localhost:${PORT}`));
+}
 
-startServer();
-
-module.exports = app;
+// Export the app for testing purposes
+export default app;

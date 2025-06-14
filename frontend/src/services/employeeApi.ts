@@ -1,68 +1,29 @@
-// --- START OF CORRECTED FILE ---
-// ---
-// frontend/src/services/employeeApi.ts
-// ---
+// src/services/employeeApi.ts
+import api from './api';
 import { Employee } from '../types';
-import { EmployeeFormData } from '../features/employees/components/EmployeeModal';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-  };
-};
-
-const handleApiResponse = async (response: Response) => {
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ msg: "An unknown error occurred." }));
-        throw new Error(errorData.msg || errorData.error || 'An API error occurred.');
-    }
-    if (response.status === 204) { // No Content
-        return;
-    }
-    return response.json();
-};
+import { EmployeeFormData } from '../features/employees/components/EmployeeModal'; // Import form data type
 
 export const fetchEmployees = async (): Promise<Employee[]> => {
-  const response = await fetch(`${API_BASE_URL}/employees`, {
-    headers: getAuthHeaders(),
-  });
-  return handleApiResponse(response);
+  const { data } = await api.get('/employees');
+  return data;
 };
 
 export const fetchEmployeeById = async (id: string): Promise<Employee> => {
-  const response = await fetch(`${API_BASE_URL}/employees/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleApiResponse(response);
+  const { data } = await api.get(`/employees/${id}`);
+  return data;
 };
 
 export const addEmployee = async (employeeData: EmployeeFormData): Promise<Employee> => {
-  const response = await fetch(`${API_BASE_URL}/employees`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(employeeData),
-  });
-  return handleApiResponse(response);
+  const { data } = await api.post('/employees', employeeData);
+  return data;
 };
 
-export const updateEmployee = async (id: string, employeeData: Partial<EmployeeFormData>): Promise<Employee> => {
-  // This is the corrected line
-  const response = await fetch(`${API_BASE_URL}/employees/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(employeeData),
-  });
-  return handleApiResponse(response);
+export const updateEmployee = async (id: string, employeeData: EmployeeFormData): Promise<Employee> => {
+  const { data } = await api.put(`/employees/${id}`, employeeData);
+  return data;
 };
 
+// This performs a "soft delete" by updating the employee's status
 export const deleteEmployee = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/employees/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-  return handleApiResponse(response);
+  await api.delete(`/employees/${id}`);
 };

@@ -1,0 +1,381 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// CORRECTED STRUCTURE: `generator` and `datasource` are now separate top-level blocks.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================================
+// Core Tenant and User Models
+// ==================================
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  schemaName  String   @unique @map("schema_name")
+  status      String   @default("active") // active, inactive, suspended
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users        User[]
+  departments  Department[]
+  employees    Employee[]
+  roles        Role[]
+  paySchedules PaySchedule[]
+  payrollRuns  PayrollRun[]
+  payslips     Payslip[]
+  payslipItems PayslipItem[]
+  dependents   EmployeeDependent[]
+  salaryComps  SalaryComponent[]
+  salarySets   EmployeeSalarySetting[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  status       String    @default("pending_verification") // active, inactive, pending_verification
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  roles              UserRole[]
+  employee           Employee?
+  processedPayroll   PayrollRun[] @relation("ProcessedBy")
+  approvedPayroll    PayrollRun[] @relation("ApprovedBy")
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  users UserRole[]
+
+  @@unique([tenantId, name])
+  @@map("roles")
+}
+
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// ==================================
+// HR & Employee Structure
+// ==================================
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  employees Employee[]
+
+  @@unique([tenantId, name])
+  @@map("departments")
+}
+
+model Employee {
+  id              String    @id @default(uuid())
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  email           String?
+  phoneNumber     String?   @map("phone_number")
+  address         String?
+  jobTitle        String?   @map("job_title")
+  dateOfBirth     DateTime? @db.Date @map("date_of_birth")
+  hireDate        DateTime? @db.Date @map("hire_date")
+  terminationDate DateTime? @db.Date @map("termination_date")
+  status          String    @default("pending_hire") // active, on_leave, terminated, pending_hire
+
+  tenantId           String @map("tenant_id")
+  tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  departmentId       String? @map("department_id")
+  department         Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  userId             String? @unique @map("user_id")
+  userAccount        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  payScheduleId      String? @map("pay_schedule_id")
+  paySchedule        PaySchedule? @relation(fields: [payScheduleId], references: [id], onDelete: SetNull)
+
+  reportingManagerId String?   @map("reporting_manager_id")
+  manager            Employee? @relation("ManagerReportees", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+  reportees          Employee[] @relation("ManagerReportees")
+
+  dependents        EmployeeDependent[]
+  bankDetails       EmployeeBankDetail[]
+  profile           EmployeeProfile?
+  salarySettings    EmployeeSalarySetting[]
+  payslips          Payslip[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, email])
+  @@map("employees")
+}
+
+model EmployeeProfile {
+  id                           String    @id @default(uuid())
+  addressLine1                 String?
+  addressLine2                 String?
+  city                         String?
+  stateProvinceRegion          String?
+  postalCode                   String?
+  country                      String?
+  emergencyContactName         String?
+  emergencyContactPhone        String?
+  emergencyContactRelationship String?
+  bio                          String?
+
+  employeeId String   @unique @map("employee_id")
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("employee_profiles")
+}
+
+model EmployeeDependent {
+  id                  String   @id @default(uuid())
+  fullName            String   @map("full_name")
+  relationship        String // spouse, child, other_relative
+  dateOfBirth         DateTime? @db.Date @map("date_of_birth")
+  isFiscallyDependent Boolean  @default(true) @map("is_fiscally_dependent")
+  effectiveStartDate  DateTime @default(now()) @db.Date @map("effective_start_date")
+  effectiveEndDate    DateTime? @db.Date @map("effective_end_date")
+  notes               String?
+
+  tenantId   String @map("tenant_id")
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  employeeId String   @map("employee_id")
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([employeeId, fullName, dateOfBirth])
+  @@map("employee_dependents")
+}
+
+model EmployeeBankDetail {
+  id                String  @id @default(uuid())
+  accountHolderName String  @map("account_holder_name")
+  bankName          String  @map("bank_name")
+  accountNumber     String  @map("account_number")
+  routingNumber     String? @map("routing_number")
+  iban              String?
+  swiftBic          String?
+  accountType       String? // checking, savings
+  currency          String  @default("MAD")
+  isPrimary         Boolean @default(false) @map("is_primary")
+
+  employeeId String   @map("employee_id")
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("employee_bank_details")
+}
+
+// ==================================
+// Payroll Structure
+// ==================================
+
+model PaySchedule {
+  id                      String   @id @default(uuid())
+  name                    String
+  frequency               String // weekly, bi_weekly, semi_monthly, monthly
+  payDayOfMonth           Int?     @map("pay_day_of_month")
+  processingDayOffsetDays Int?     @default(2) @map("processing_day_offset_days")
+  isActive                Boolean  @default(true) @map("is_active")
+
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  employees   Employee[]
+  payrollRuns PayrollRun[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, name])
+  @@map("pay_schedules")
+}
+
+model SalaryComponent {
+  id                  String  @id @default(uuid())
+  name                String
+  description         String?
+  type                String // earning, deduction
+  calculationType     String  @default("fixed") @map("calculation_type") // fixed, percentage, formula
+  category            String  @default("employee_earning")
+  amount              Decimal? @db.Decimal(12, 2)
+  percentage          Decimal? @db.Decimal(5, 2)
+  isTaxable           Boolean @default(false) @map("is_taxable")
+  isActive            Boolean @default(true) @map("is_active")
+  isSystemDefined     Boolean @default(false) @map("is_system_defined")
+  payslipDisplayOrder Int?    @map("payslip_display_order")
+  componentCode       String? @unique @map("component_code")
+  isCnssSubject       Boolean @default(false) @map("is_cnss_subject")
+  isAmoSubject        Boolean @default(false) @map("is_amo_subject")
+
+  tenantId String? @map("tenant_id")
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  employeeSettings EmployeeSalarySetting[]
+  payslipItems     PayslipItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, name])
+  @@map("salary_components")
+}
+
+model EmployeeSalarySetting {
+  id              String   @id @default(uuid())
+  effectiveDate   DateTime @db.Date @map("effective_date")
+  amount          Decimal? @db.Decimal(12, 2)
+  percentage      Decimal? @db.Decimal(5, 2)
+  isActive        Boolean  @default(true) @map("is_active")
+
+  tenantId          String @map("tenant_id")
+  tenant            Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  employeeId        String   @map("employee_id")
+  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  salaryComponentId String   @map("salary_component_id")
+  salaryComponent   SalaryComponent @relation(fields: [salaryComponentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([employeeId, salaryComponentId, isActive])
+  @@map("employee_salary_settings")
+}
+
+// ==================================
+// Payroll Run & Output
+// ==================================
+
+model PayrollRun {
+  id                  String   @id @default(uuid())
+  periodStart         DateTime @db.Date @map("period_start")
+  periodEnd           DateTime @db.Date @map("period_end")
+  paymentDate         DateTime @db.Date @map("payment_date")
+  status              String   @default("pending_review")
+  totalGrossPay       Decimal? @db.Decimal(15, 2) @map("total_gross_pay")
+  totalDeductions     Decimal? @db.Decimal(15, 2) @map("total_deductions")
+  totalNetPay         Decimal? @db.Decimal(15, 2) @map("total_net_pay")
+  totalEmployees      Int?
+  totalEmployerTaxes  Decimal? @db.Decimal(15, 2) @map("total_employer_taxes")
+  processedAt         DateTime? @map("processed_at")
+  approvedAt          DateTime? @map("approved_at")
+  notes               String?
+
+  tenantId          String @map("tenant_id")
+  tenant            Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  payScheduleId     String @map("pay_schedule_id")
+  paySchedule       PaySchedule @relation(fields: [payScheduleId], references: [id], onDelete: Restrict)
+
+  processedByUserId String? @map("processed_by_user_id")
+  processedByUser   User?   @relation("ProcessedBy", fields: [processedByUserId], references: [id], onDelete: SetNull)
+
+  approvedByUserId  String? @map("approved_by_user_id")
+  approvedByUser    User?   @relation("ApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  payslips Payslip[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, payScheduleId, periodEnd])
+  @@map("payroll_runs")
+}
+
+model Payslip {
+  id         String  @id @default(uuid())
+  grossPay   Decimal @db.Decimal(12, 2) @map("gross_pay")
+  deductions Decimal @db.Decimal(12, 2)
+  taxes      Decimal @db.Decimal(12, 2)
+  netPay     Decimal @db.Decimal(12, 2) @map("net_pay")
+  notes      String?
+
+  tenantId     String @map("tenant_id")
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  employeeId   String   @map("employee_id")
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  payrollRunId String     @map("payroll_run_id")
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+
+  payslipItems PayslipItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([employeeId, payrollRunId])
+  @@map("payslips")
+}
+
+model PayslipItem {
+  id                String  @id @default(uuid())
+  description       String
+  type              String // earning, deduction, tax, reimbursement
+  amount            Decimal @db.Decimal(12, 2)
+
+  tenantId          String @map("tenant_id")
+  tenant            Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  payslipId         String    @map("payslip_id")
+  payslip           Payslip   @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+  
+  salaryComponentId String          @map("salary_component_id")
+  salaryComponent   SalaryComponent @relation(fields: [salaryComponentId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("payslip_items")
+}

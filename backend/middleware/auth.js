@@ -1,29 +1,46 @@
-const { User } = require('../models');
+// backend/middleware/auth.js
+import jwt from 'jsonwebtoken';
+import prisma from '../lib/prisma.js';
 
-// This is the mock authentication middleware we will use for now.
-// In the future, this is where you would decode a real JWT (JSON Web Token).
-const authenticateAndAttachUser = async (req, res, next) => {
+// This is the real JWT authentication middleware.
+export const authenticateAndAttachUser = async (req, res, next) => {
+  // Get token from header
+  const token = req.header('x-auth-token');
+
+  // Check if no token
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  // Verify token
   try {
-    // For now, we hardcode the user for testing purposes.
-    const loggedInUser = await User.findOne({
-      where: { email: 'manager.rh@techsolutions.ma' }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Find the user in the database using the ID from the token payload
+    const user = await prisma.user.findUnique({
+      where: {
+        id: decoded.user.id,
+      },
+      // Include the user's roles for potential authorization checks later
+      include: {
+        roles: {
+          include: {
+            role: true,
+          },
+        },
+      },
     });
 
-    if (!loggedInUser) {
-      return res.status(401).json({ error: 'Authentication failed: User not found.' });
+    if (!user) {
+      return res.status(401).json({ msg: 'Token is not valid' });
     }
 
-    // Attach the user object to the request for subsequent route handlers to use.
-    req.user = loggedInUser;
-
-    // Pass control to the next middleware or route handler in the chain.
+    // Attach the full user object to the request
+    // We can simplify this later, but for now, it's fine
+    req.user = user;
+    
     next();
-  } catch (error) {
-    console.error("Authentication middleware error:", error);
-    return res.status(500).json({ error: "An internal server error occurred during authentication." });
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
   }
-};
-
-module.exports = {
-  authenticateAndAttachUser
 };

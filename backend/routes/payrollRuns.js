@@ -1,43 +1,43 @@
-// --- File: backend/routes/payrollRuns.js ---
-const express = require('express');
+// backend/routes/payrollRuns.js
+import express from 'express';
+import prisma from '../lib/prisma.js';
+import { processPayroll } from '../services/payrollEngine.js';
+import { check, validationResult } from 'express-validator';
+
 const router = express.Router();
-const { PayrollRun } = require('../models');
-const { processPayroll } = require('../services/payrollEngine');
-const { check, validationResult } = require('express-validator');
 
 router.get('/', async (req, res) => {
+    const { tenantId } = req.user;
     try {
-        const { tenantId } = req.user;
-        const runs = await PayrollRun.findAll({
+        const runs = await prisma.payrollRun.findMany({
             where: { tenantId },
-            order: [['paymentDate', 'DESC']],
+            orderBy: { paymentDate: 'desc' },
         });
         res.json(runs);
     } catch (err) {
-        console.error(err.message);
+        console.error('Error fetching payroll runs:', err.message);
         res.status(500).send('Server Error');
     }
 });
 
 router.post('/', [
-        check('payScheduleId', 'Pay Schedule is required').isUUID(),
-        check('periodEndDate', 'Period end date is required').isISO8601().toDate(),
-        check('paymentDate', 'Payment date is required').isISO8601().toDate(),
-    ], async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-        const { tenantId, id: userId } = req.user;
-        const { payScheduleId, periodEndDate, paymentDate } = req.body;
-        try {
-            const { payrollRun } = await processPayroll(tenantId, payScheduleId, periodEndDate, paymentDate, userId);
-            res.status(201).json({ message: 'Payroll run initiated and completed successfully.', payrollRun });
-        } catch (error) {
-            console.error('Error starting payroll run:', error);
-            res.status(500).json({ msg: 'An internal server error occurred while processing payroll.', error: error.message });
-        }
+    check('payScheduleId', 'Pay Schedule is required').isUUID(),
+    check('periodEndDate', 'Period end date is required').isISO8601().toDate(),
+    check('paymentDate', 'Payment date is required').isISO8601().toDate(),
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
-);
+    const { tenantId, id: userId } = req.user;
+    const { payScheduleId, periodEndDate, paymentDate } = req.body;
+    try {
+        const { payrollRun } = await processPayroll(tenantId, payScheduleId, periodEndDate, paymentDate, userId);
+        res.status(201).json({ message: 'Payroll run initiated and completed successfully.', payrollRun });
+    } catch (error) {
+        console.error('Error starting payroll run:', error);
+        res.status(500).json({ msg: 'An internal server error occurred while processing payroll.', error: error.message });
+    }
+});
 
-module.exports = router;
+export default router;

@@ -1,204 +1,153 @@
-const express = require('express');
+// backend/routes/salaryComponents.js
+import express from 'express';
+import prisma from '../lib/prisma.js'; // Prisma client is already imported correctly
+
 const router = express.Router();
-const { Op } = require('sequelize');
-const { SalaryComponent } = require('../models');
-// We assume 'authenticateAndAttachUser' middleware will be applied when this router is mounted in server.js
-// For example: app.use('/api/salary-components', authenticateAndAttachUser, salaryComponentsRouter);
-// So, req.user should be populated by that middleware.
 
 // GET all salary components for the tenant or system-defined
-// Original: app.get('/api/salary-components', authenticateAndAttachUser, async (req, res) => { ... });
 router.get('/', async (req, res) => {
+    const { tenantId } = req.user;
     try {
-        if (!req.user || !req.user.tenantId) {
-            return res.status(401).json({ error: 'User not authenticated or tenantId missing.' });
-        }
-        const { tenantId } = req.user;
-        const salaryComponents = await SalaryComponent.findAll({
+        const salaryComponents = await prisma.salaryComponent.findMany({
             where: {
-                [Op.or]: [
+                OR: [
                     { tenantId: tenantId },
-                    { tenantId: null, is_system_defined: true, is_active: true }
+                    { tenantId: null, isSystemDefined: true, isActive: true }
                 ]
             },
-            order: [['is_system_defined', 'DESC'], ['name', 'ASC']]
+            orderBy: [
+                { isSystemDefined: 'desc' },
+                { name: 'asc' }
+            ]
         });
         res.json(salaryComponents);
-    } catch (error) {
-        console.error('Error fetching salary components:', error);
+    } catch (err) {
+        console.error('Error fetching salary components:', err);
         res.status(500).json({ error: 'An internal server error occurred while fetching salary components.' });
     }
 });
 
 // CREATE a new salary component for the tenant
-// Original: app.post('/api/salary-components', authenticateAndAttachUser, async (req, res) => { ... });
 router.post('/', async (req, res) => {
+    const { tenantId } = req.user;
+    const { name, description, type, calculationType, amount, percentage, isTaxable, payslipDisplayOrder, category } = req.body;
+
+    // Basic validation
+    if (!name || !type || !calculationType) {
+        return res.status(400).json({ error: 'Name, type, and calculationType are required.' });
+    }
+    
     try {
-        if (!req.user || !req.user.tenantId) {
-            return res.status(401).json({ error: 'User not authenticated or tenantId missing.' });
-        }
-        const { tenantId } = req.user;
-        const { name, description, type, calculationType, amount, percentage, is_taxable, payslip_display_order, category } = req.body;
-
-        const VALID_CATEGORIES = ['employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction'];
-        if (category && !VALID_CATEGORIES.includes(category)) {
-            return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
-        }
-
-        if (!name || !type) {
-            return res.status(400).json({ error: 'Name and type are required.' });
-        }
-        if (!['earning', 'deduction', 'employer_contribution', 'statutory_deduction_from_employer_perspective'].includes(type) && !VALID_CATEGORIES.map(c => c.startsWith(type)).some(Boolean) ) {
-             // Simplified type validation for this context, actual model might have stricter enum
-            if (!['earning', 'deduction'].includes(type)) { // Fallback to simpler validation if category doesn't cover type
-                 return res.status(400).json({ error: "Type must be 'earning' or 'deduction' or a valid category prefix." });
+        const newSalaryComponent = await prisma.salaryComponent.create({
+            data: {
+                tenantId,
+                name,
+                description,
+                type,
+                calculationType,
+                isTaxable: !!isTaxable,
+                isSystemDefined: false, // User-created components are never system-defined
+                isActive: true,
+                payslipDisplayOrder: payslipDisplayOrder ? parseInt(payslipDisplayOrder, 10) : null,
+                amount: amount ? parseFloat(amount) : null,
+                percentage: percentage ? parseFloat(percentage) : null,
+                category: category || (type === 'earning' ? 'employee_earning' : 'employee_deduction'),
             }
-        }
-
-
-        const validCalculationTypes = ['fixed', 'percentage', 'formula'];
-        if (!calculationType || !validCalculationTypes.includes(calculationType)) {
-            return res.status(400).json({ error: `Calculation type must be one of: ${validCalculationTypes.join(', ')}.` });
-        }
-
-        const newSalaryComponentData = {
-            tenantId,
-            name,
-            description,
-            type,
-            calculationType,
-            is_taxable: !!is_taxable,
-            is_system_defined: false, // New components are never system_defined
-            is_active: true, // Default to active
-            payslip_display_order: payslip_display_order ? parseInt(payslip_display_order, 10) : null,
-            amount: null,
-            percentage: null,
-            category: category
-        };
-
-        if (calculationType === 'fixed') {
-            if (amount === undefined || amount === null || isNaN(parseFloat(amount))) {
-                return res.status(400).json({ error: 'Valid amount is required for fixed calculation type.' });
-            }
-            newSalaryComponentData.amount = parseFloat(amount);
-        } else if (calculationType === 'percentage') {
-            if (percentage === undefined || percentage === null || isNaN(parseFloat(percentage))) {
-                return res.status(400).json({ error: 'Valid percentage is required for percentage calculation type.' });
-            }
-            newSalaryComponentData.percentage = parseFloat(percentage);
-        }
-
-        const newSalaryComponent = await SalaryComponent.create(newSalaryComponentData);
+        });
         res.status(201).json(newSalaryComponent);
-    } catch (error) {
-        if (error.name === 'SequelizeUniqueConstraintError') {
-            return res.status(409).json({ error: 'A salary component with this name already exists for your tenant.' });
+    } catch (err) {
+        if (err.code === 'P2002') { // Unique constraint violation
+            return res.status(409).json({ error: 'A salary component with this name already exists.' });
         }
-        console.error('Error creating salary component:', error);
-        res.status(500).json({ error: 'An internal server error occurred while creating the salary component.' });
+        console.error('Error creating salary component:', err);
+        res.status(500).json({ error: 'An internal server error occurred.' });
     }
 });
 
 // UPDATE an existing salary component for the tenant
-// Original: app.put('/api/salary-components/:componentId', authenticateAndAttachUser, async (req, res) => { ... });
 router.put('/:componentId', async (req, res) => {
-    try {
-        if (!req.user || !req.user.tenantId) {
-            return res.status(401).json({ error: 'User not authenticated or tenantId missing.' });
-        }
-        const { tenantId } = req.user;
-        const { componentId } = req.params;
-        const { name, description, type, calculationType, amount, percentage, is_taxable, is_active, payslip_display_order, category } = req.body;
+    const { tenantId } = req.user;
+    const { componentId } = req.params;
+    const { name, description, type, calculationType, amount, percentage, isTaxable, isActive, payslipDisplayOrder, category } = req.body;
 
-        const component = await SalaryComponent.findOne({
-            where: { id: componentId, tenantId: tenantId, is_system_defined: false } // Can only update non-system components
+    try {
+        // First, ensure the component exists and belongs to the user's tenant
+        const component = await prisma.salaryComponent.findFirst({
+            where: {
+                id: componentId,
+                tenantId: tenantId,
+                isSystemDefined: false // Can only update non-system components
+            }
         });
 
         if (!component) {
             return res.status(404).json({ error: 'Custom salary component not found or access denied.' });
         }
-
-        const VALID_CATEGORIES = ['employee_earning', 'employee_deduction', 'employer_contribution_social', 'employer_contribution_other', 'statutory_deduction'];
-        if (category && !VALID_CATEGORIES.includes(category)) {
-            return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+        
+        const updatedData = {
+            name, description, type, calculationType,
+            isTaxable, isActive, payslipDisplayOrder, category,
+            amount: amount ? parseFloat(amount) : null,
+            percentage: percentage ? parseFloat(percentage) : null,
+        };
+        
+        // Logic to nullify amount/percentage based on calculationType
+        if (calculationType === 'fixed') {
+            updatedData.percentage = null;
+        } else if (calculationType === 'percentage') {
+            updatedData.amount = null;
+        } else if (calculationType === 'formula') {
+            updatedData.amount = null;
+            updatedData.percentage = null;
         }
 
-        if (name !== undefined) component.name = name;
-        if (description !== undefined) component.description = description;
-        if (type !== undefined) {
-             if (!['earning', 'deduction'].includes(type)) { // Simplified validation
-                 return res.status(400).json({ error: "Invalid type. Must be 'earning' or 'deduction'." });
-            }
-            component.type = type;
+        const updatedComponent = await prisma.salaryComponent.update({
+            where: { id: componentId },
+            data: updatedData
+        });
+
+        res.json(updatedComponent);
+    } catch (err) {
+        if (err.code === 'P2002') { // Unique constraint violation
+            return res.status(409).json({ error: 'A salary component with this name already exists.' });
         }
-
-        if (calculationType !== undefined) {
-            const validCalculationTypes = ['fixed', 'percentage', 'formula'];
-            if (!validCalculationTypes.includes(calculationType)) {
-                return res.status(400).json({ error: `Calculation type must be one of: ${validCalculationTypes.join(', ')}.` });
-            }
-            component.calculationType = calculationType;
-        }
-
-        // Reset amount/percentage based on new calculationType or update existing values
-        if (component.calculationType === 'fixed') {
-            component.percentage = null;
-            if (amount !== undefined) { // Only update if amount is provided
-                 if (amount === null || isNaN(parseFloat(amount))) return res.status(400).json({ error: 'Valid amount is required for fixed calculation type.' });
-                 component.amount = parseFloat(amount);
-            }
-        } else if (component.calculationType === 'percentage') {
-            component.amount = null;
-            if (percentage !== undefined) { // Only update if percentage is provided
-                if (percentage === null || isNaN(parseFloat(percentage))) return res.status(400).json({ error: 'Valid percentage is required for percentage type.' });
-                component.percentage = parseFloat(percentage);
-            }
-        } else if (component.calculationType === 'formula') {
-            component.amount = null;
-            component.percentage = null;
-        }
-
-
-        if (is_taxable !== undefined) component.is_taxable = !!is_taxable;
-        if (is_active !== undefined) component.is_active = !!is_active; // Allow updating is_active
-        if (payslip_display_order !== undefined) component.payslip_display_order = payslip_display_order ? parseInt(payslip_display_order, 10) : null;
-        if (category !== undefined) component.category = category;
-
-        await component.save();
-        res.json(component);
-    } catch (error) {
-        if (error.name === 'SequelizeUniqueConstraintError') {
-            return res.status(409).json({ error: 'A salary component with this name already exists for your tenant.' });
-        }
-        console.error('Error updating salary component:', error);
-        res.status(500).json({ error: 'An internal server error occurred while updating the salary component.' });
+        console.error('Error updating salary component:', err);
+        res.status(500).json({ error: 'An internal server error occurred.' });
     }
 });
 
 // DELETE a custom salary component for the tenant
-// Original: app.delete('/api/salary-components/:componentId', authenticateAndAttachUser, async (req, res) => { ... });
 router.delete('/:componentId', async (req, res) => {
-    try {
-        if (!req.user || !req.user.tenantId) {
-            return res.status(401).json({ error: 'User not authenticated or tenantId missing.' });
-        }
-        const { tenantId } = req.user;
-        const { componentId } = req.params;
+    const { tenantId } = req.user;
+    const { componentId } = req.params;
 
-        const component = await SalaryComponent.findOne({
-            where: { id: componentId, tenantId: tenantId, is_system_defined: false } // Can only delete non-system components
+    try {
+        // Ensure the component exists, belongs to the tenant, and is not system-defined
+        const component = await prisma.salaryComponent.findFirst({
+            where: {
+                id: componentId,
+                tenantId: tenantId,
+                isSystemDefined: false
+            }
         });
 
         if (!component) {
             return res.status(404).json({ error: 'Custom salary component not found or access denied.' });
         }
 
-        await component.destroy();
+        await prisma.salaryComponent.delete({
+            where: { id: componentId }
+        });
+
         res.status(204).send(); // No content on successful deletion
-    } catch (error) {
-        console.error('Error deleting salary component:', error);
-        res.status(500).json({ error: 'An internal server error occurred while deleting the salary component.' });
+    } catch (err) {
+        // P2003 = Foreign key constraint failed. This component is in use.
+        if (err.code === 'P2003') {
+            return res.status(409).json({ error: 'Cannot delete this component because it is being used in an employee\'s salary settings or a historical payslip.' });
+        }
+        console.error('Error deleting salary component:', err);
+        res.status(500).json({ error: 'An internal server error occurred.' });
     }
 });
 
-module.exports = router;
+export default router;
