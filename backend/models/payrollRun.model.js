@@ -53,13 +53,13 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     indexes: [
       // FIX: Use snake_case column names when `underscored: true` is set.
-      { fields: ['tenant_id'] },
-      { fields: ['pay_schedule_id'] },
+      { fields: ['tenantId'] },
+      { fields: ['payScheduleId'] },
       { fields: ['status'] },
-      { fields: ['payment_date'] },
+      { fields: ['paymentDate'] },
       {
         unique: true,
-        fields: ['tenant_id', 'pay_schedule_id', 'period_end', 'status'],
+        fields: ['tenantId', 'payScheduleId', 'periodEnd', 'status'],
         name: 'unique_tenant_schedule_period_run'
       }
     ]

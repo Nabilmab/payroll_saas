@@ -157,12 +157,13 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'employees',
     timestamps: true,
     paranoid: true,
+    underscored: true,
     indexes: [
-      { name: 'employees_tenant_id_idx', fields: ['tenant_id'] },
+      { name: 'employees_tenant_id_idx', fields: ['tenantId'] },
       { fields: ['departmentId'] },
       { fields: ['userId'] },
-      { unique: true, fields: ['tenant_id', 'email'], name: 'unique_tenant_employee_email', where: { email: { [Op.ne]: null } } },
-      { unique: true, fields: ['tenant_id', 'employeeIdAlt'], name: 'unique_tenant_employee_id_alt', where: { employeeIdAlt: { [Op.ne]: null } } }
+      { unique: true, fields: ['tenantId', 'email'], name: 'unique_tenant_employee_email', where: { email: { [Op.ne]: null } } },
+      { unique: true, fields: ['tenantId', 'employeeIdAlt'], name: 'unique_tenant_employee_id_alt', where: { employeeIdAlt: { [Op.ne]: null } } }
     ]
   });
 

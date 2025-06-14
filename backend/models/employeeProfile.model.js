@@ -114,11 +114,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'employee_profiles',
     timestamps: true,   // Enable timestamps (createdAt, updatedAt)
     paranoid: true,     // Enable soft deletes, aligns with Employee model
-    // underscored: true, // REMOVED
+    underscored: true,
     // Model attribute `employeeId` (camelCase) will be mapped to `employee_id` (snake_case)
     // in the DB due to `underscored: true`.
     indexes: [
-      { name: 'employee_profiles_employee_id', fields: ['employee_id'], unique: true } // Updated
+      { name: 'employee_profiles_employee_id', fields: ['employeeId'], unique: true } // Updated
     ]
   });
 
