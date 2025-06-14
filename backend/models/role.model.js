@@ -72,7 +72,7 @@ module.exports = (sequelize, DataTypes) => {
       {
         unique: true,
         // FIX: Use snake_case column names when `underscored: true` is set.
-        fields: ['tenant_id', 'name']
+        fields: ['tenantId', 'name']
       }
     ]
   });
