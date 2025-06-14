@@ -70,9 +70,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM('active', 'inactive', 'pending_verification'),
+      type: DataTypes.STRING,
       defaultValue: 'pending_verification',
       allowNull: false,
+      validate: {
+        isIn: [['active', 'inactive', 'pending_verification']],
+      },
     },
     lastLoginAt: {
       type: DataTypes.DATE,
