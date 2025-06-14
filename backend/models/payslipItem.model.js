@@ -48,8 +48,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     type: { // To classify the item, e.g., earning, deduction, tax, reimbursement
-      type: DataTypes.ENUM('earning', 'deduction', 'tax', 'reimbursement', 'employer_contribution', 'other'),
+      type: DataTypes.STRING,
       allowNull: false,
+      validate: {
+        isIn: [['earning', 'deduction', 'tax', 'reimbursement', 'employer_contribution', 'other']],
+      },
     },
     amount: {
       type: DataTypes.DECIMAL(12, 2), // Precision 12, 2 decimal places
@@ -70,9 +73,9 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true, // For snake_case column names
     indexes: [
       // FIX: Use snake_case column names when `underscored: true` is set.
-      { fields: ['tenant_id'] },
-      { fields: ['payslip_id'] },
-      { fields: ['salary_component_id'] },
+      { fields: ['tenantId'] },
+      { fields: ['payslipId'] },
+      { fields: ['salaryComponentId'] },
     ]
     // No specific unique indexes here by default, as a payslip can have multiple items of the same type
     // (e.g., multiple "other" earnings or deductions with different descriptions).

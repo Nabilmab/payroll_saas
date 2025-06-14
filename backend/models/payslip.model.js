@@ -86,14 +86,14 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true, // This correctly maps JS camelCase to DB snake_case
     indexes: [
       // FIX: Use snake_case column names when `underscored: true` is set.
-      { fields: ['tenant_id'] },
-      { fields: ['employee_id'] },
-      { fields: ['payroll_run_id'] },
+      { fields: ['tenantId'] },
+      { fields: ['employeeId'] },
+      { fields: ['payrollRunId'] },
 
       // A payslip should be unique per employee per payroll run
       {
         unique: true,
-        fields: ['employee_id', 'payroll_run_id'],
+        fields: ['employeeId', 'payrollRunId'],
         name: 'unique_employee_payslip_for_run'
       }
     ]
