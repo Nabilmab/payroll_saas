@@ -1,19 +1,21 @@
 // frontend/src/features/salaryComponents/pages/SalaryComponentsPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next'; // ACTION: Import useTranslation
 import { Box, Heading, Button, useDisclosure, useToast, Spinner, Text, Flex } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 import SalaryComponentList from '../components/SalaryComponentList';
 import SalaryComponentModal from '../components/SalaryComponentModal';
-import { SalaryComponent, SalaryComponentFormData } from '../../../types'; // Path to your types
+import { SalaryComponent, SalaryComponentFormData } from '../../../types';
 import {
   fetchSalaryComponents,
   addSalaryComponent,
   updateSalaryComponent,
   deleteSalaryComponent,
-  toggleSalaryComponentActive, // Assuming you added this to your API service
-} from '../../../services/salaryComponentApi'; // Path to your API service
+  toggleSalaryComponentActive,
+} from '../../../services/salaryComponentApi';
 
 const SalaryComponentsPage: React.FC = () => {
+  const { t } = useTranslation(); // ACTION: Initialize t function
   const [components, setComponents] = useState<SalaryComponent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +31,10 @@ const SalaryComponentsPage: React.FC = () => {
       const data = await fetchSalaryComponents();
       setComponents(data);
     } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to fetch salary components.';
+      const errorMessage = err?.message || t('salaryComponents.loadingErrorDesc');
       setError(errorMessage);
       toast({
-        title: 'Error fetching components',
+        title: t('salaryComponents.loadingError'),
         description: errorMessage,
         status: 'error',
         duration: 5000,
@@ -42,14 +44,14 @@ const SalaryComponentsPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]); // ACTION: Add t to dependency array
 
   useEffect(() => {
     loadComponents();
   }, [loadComponents]);
 
   const handleOpenAddModal = () => {
-    setEditingComponent(undefined); // Ensure no component is being edited
+    setEditingComponent(undefined);
     onModalOpen();
   };
 
@@ -59,36 +61,36 @@ const SalaryComponentsPage: React.FC = () => {
   };
 
   const handleSaveComponent = async (data: SalaryComponentFormData) => {
-    setIsLoading(true); // Consider a more granular loading state for modal operations
+    setIsLoading(true);
     setError(null);
     try {
       let savedComponent;
-      if (data.id) { // If id exists, it's an update
+      if (data.id) {
         savedComponent = await updateSalaryComponent(data.id, data);
         toast({
-          title: 'Component Updated',
-          description: `${savedComponent.name} has been updated successfully.`,
+          title: t('salaryComponents.updateSuccess'),
+          description: t('salaryComponents.updateSuccessDesc', { name: savedComponent.name }),
           status: 'success',
           duration: 3000,
           isClosable: true,
         });
-      } else { // No id, so it's an add
+      } else {
         savedComponent = await addSalaryComponent(data);
         toast({
-          title: 'Component Added',
-          description: `${savedComponent.name} has been added successfully.`,
+          title: t('salaryComponents.addSuccess'),
+          description: t('salaryComponents.addSuccessDesc', { name: savedComponent.name }),
           status: 'success',
           duration: 3000,
           isClosable: true,
         });
       }
-      onModalClose(); // Close modal first
-      await loadComponents(); // Then reload components to reflect changes
+      onModalClose();
+      await loadComponents();
     } catch (err: any) {
-      const errorMessage = err?.error || err?.message || (data.id ? 'Failed to update component.' : 'Failed to add component.');
-      setError(errorMessage); // Set page-level error if needed, or rely on toast
+      const errorMessage = err?.error || err?.message || (data.id ? t('salaryComponents.updateFail') : t('salaryComponents.addFail'));
+      setError(errorMessage);
       toast({
-        title: data.id ? 'Update Failed' : 'Add Failed',
+        title: data.id ? t('salaryComponents.updateFail') : t('salaryComponents.addFail'),
         description: errorMessage,
         status: 'error',
         duration: 5000,
@@ -96,15 +98,15 @@ const SalaryComponentsPage: React.FC = () => {
       });
       console.error(err);
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
     }
   };
 
   const handleToggleActive = async (componentToToggle: SalaryComponent) => {
+    // This function logic remains the same, but toasts could be translated too.
     setIsLoading(true);
     setError(null);
     try {
-      // Use the dedicated toggle function from the API service
       const updatedComponent = await toggleSalaryComponentActive(componentToToggle);
       setComponents((prevComponents) =>
         prevComponents.map((c) => (c.id === updatedComponent.id ? updatedComponent : c))
@@ -133,8 +135,7 @@ const SalaryComponentsPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // Optional: Add a confirmation dialog here
-    if (!window.confirm('Are you sure you want to delete this salary component?')) {
+    if (!window.confirm(t('salaryComponents.deleteConfirm'))) {
       return;
     }
     setIsLoading(true);
@@ -143,17 +144,17 @@ const SalaryComponentsPage: React.FC = () => {
       await deleteSalaryComponent(id);
       setComponents((prevComponents) => prevComponents.filter((c) => c.id !== id));
       toast({
-        title: 'Component Deleted',
-        description: 'The salary component has been deleted successfully.',
-        status: 'warning', // Or 'success'
+        title: t('salaryComponents.deleteSuccess'),
+        description: t('salaryComponents.deleteSuccessDesc'),
+        status: 'warning',
         duration: 3000,
         isClosable: true,
       });
     } catch (err: any) {
-      const errorMessage = err?.error || err?.message || 'Failed to delete salary component.';
+      const errorMessage = err?.error || err?.message || t('salaryComponents.deleteFail');
       setError(errorMessage);
       toast({
-        title: 'Deletion Failed',
+        title: t('salaryComponents.deleteFail'),
         description: errorMessage,
         status: 'error',
         duration: 5000,
@@ -168,23 +169,23 @@ const SalaryComponentsPage: React.FC = () => {
   return (
     <Box p={5}>
       <Flex justifyContent="space-between" alignItems="center" mb={6}>
-        <Heading size="lg">Manage Salary Components</Heading>
+        <Heading size="lg">{t('salaryComponents.pageTitle')}</Heading>
         <Button
           leftIcon={<AddIcon />}
           colorScheme="teal"
           onClick={handleOpenAddModal}
         >
-          Add New Component
+          {t('salaryComponents.addNew')}
         </Button>
       </Flex>
 
-      {isLoading && components.length === 0 && ( // Show spinner only on initial load
+      {isLoading && components.length === 0 && (
         <Flex justifyContent="center" alignItems="center" height="200px">
           <Spinner size="xl" />
         </Flex>
       )}
 
-      {error && ( // Display a general error message if needed, or rely solely on toasts
+      {error && (
         <Box color="red.500" mb={4} p={3} borderWidth="1px" borderRadius="md" borderColor="red.300" bg="red.50">
           <Text fontWeight="bold">An error occurred:</Text>
           <Text>{error}</Text>
@@ -192,16 +193,15 @@ const SalaryComponentsPage: React.FC = () => {
       )}
 
       {!isLoading && !error && components.length === 0 && (
-         <Text mt="4">No salary components found. Click "Add New Component" to get started!</Text>
+         <Text mt="4">{t('salaryComponents.noComponents')}</Text>
       )}
 
       {components.length > 0 && (
         <SalaryComponentList
           components={components}
-          onEdit={handleOpenEditModal} // Pass the correct handler
+          onEdit={handleOpenEditModal}
           onDelete={handleDelete}
           onToggleActive={handleToggleActive}
-          // The list component itself should disable edit/delete for system_defined items
         />
       )}
 
@@ -209,7 +209,7 @@ const SalaryComponentsPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => {
           onModalClose();
-          setEditingComponent(undefined); // Clear editing state when modal closes
+          setEditingComponent(undefined);
         }}
         onSave={handleSaveComponent}
         component={editingComponent}

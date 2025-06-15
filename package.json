@@ -7,10 +7,10 @@
     "start:backend": "node backend/server.js",
     "dev:backend": "npx nodemon backend/server.js",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
-    "db:migrate": "npx prisma migrate dev --schema=./backend/prisma/schema.prisma",
-    "db:seed": "node backend/prisma/seed.js",
-    "prisma:generate": "cd backend && npx prisma generate",
-    "test:db:sync": "dotenv -e backend/.env -- npx cross-env DATABASE_URL=\"$TEST_DATABASE_URL\" prisma migrate deploy --schema=./backend/prisma/schema.prisma"
+    "db:migrate": "dotenv -e backend/.env -- npx prisma migrate dev",
+    "db:seed": "dotenv -e backend/.env -- node backend/prisma/seed.js",
+    "prisma:generate": "npx prisma generate",
+    "test:db:sync": "dotenv -e backend/.env -- npx cross-env DATABASE_URL=\"$TEST_DATABASE_URL\" prisma migrate deploy"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
@@ -27,11 +27,13 @@
     "express": "^4.19.2",
     "express-validator": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "mathjs": "^14.5.2",
     "prisma": "^5.15.0",
     "supertest": "^7.0.0",
     "validator": "^13.12.0"
   },
   "prisma": {
-    "seed": "node backend/prisma/seed.js"
+    "seed": "dotenv -e backend/.env -- node backend/prisma/seed.js",
+    "schema": "backend/prisma/schema.prisma"
   }
 }

@@ -1,0 +1,19 @@
+{
+    "salaryComponents": {
+        "pageTitle": "Manage Salary Components",
+        "addNew": "Add New Component",
+        "loadingError": "Error fetching components",
+        "loadingErrorDesc": "Failed to fetch salary components.",
+        "addSuccess": "Component Added",
+        "addSuccessDesc": "The component \"{{name}}\" has been added successfully.",
+        "updateSuccess": "Component Updated",
+        "updateSuccessDesc": "The component \"{{name}}\" has been updated successfully.",
+        "addFail": "Add Failed",
+        "updateFail": "Update Failed",
+        "deleteConfirm": "Are you sure you want to delete this salary component?",
+        "deleteSuccess": "Component Deleted",
+        "deleteSuccessDesc": "The salary component has been deleted successfully.",
+        "deleteFail": "Deletion Failed",
+        "noComponents": "No salary components found. Click \"Add New Component\" to get started!"
+    }
+}

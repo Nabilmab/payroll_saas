@@ -1,12 +1,18 @@
 // src/types/index.ts
 
-// Using camelCase to match Prisma's JSON output
+export interface Jurisdiction {
+  id: string;
+  name: string;
+  currency: string;
+  locale: string;
+}
+
 export interface Tenant {
   id: string;
   name: string;
-  description?: string | null;
   schemaName: string;
-  status: string;
+  jurisdiction: Jurisdiction;
+  userRole?: string;
 }
 
 export interface Department {
@@ -113,12 +119,40 @@ export interface Payslip {
     payslipItems: PayslipItem[];
 }
 
-// --- ✅ FIX: Add these missing authentication types ---
+// --- Authentication Types ---
+
 export interface LoginCredentials {
     email: string;
     password: string;
 }
 
+// This is the base user profile, without any tenant context.
+export interface UserProfile {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+}
+
+// This is the object that will be stored in our UserContext and localStorage.
+// It represents the user AND their active session.
+export interface UserContextProfile extends UserProfile {
+    tenant: Tenant & {
+        userRole: {
+            id: string;
+            name: string;
+        }
+    }
+}
+
+// The response from POST /api/auth/login
 export interface LoginResponse {
+    user: UserProfile; // Returns the base user profile
+    tenants: Tenant[];
+}
+
+// The response from POST /api/auth/select-tenant
+export interface SelectTenantResponse {
     token: string;
+    user: UserContextProfile; // Returns the full user profile with context
 }

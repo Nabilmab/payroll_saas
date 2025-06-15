@@ -1,25 +1,13 @@
 // frontend/src/features/salaryComponents/components/SalaryComponentList.tsx
 import React, { FC } from 'react';
-import { SalaryComponent } from '../../../types'; // Ensure this path is correct
-import formatFinancialValue from '../../../utils/formatAmount';
+import { SalaryComponent } from '../../../types';
+import formatFinancialValue from '../../../utils/formatAmount'; // Unchanged import
 
 import {
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableContainer,
-  Button, // Retained for consistency if preferred, but IconButton is used below
-  Text,
-  Box,
-  Switch,
-  Badge,   // For better visual distinction of type/status
-  Tooltip, // For better UX on disabled actions
-  IconButton, // Alternative for actions
+  Table, Thead, Tbody, Tr, Th, Td, TableContainer,
+  Text, Box, Switch, Badge, Tooltip, IconButton,
 } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon } from '@chakra-ui/icons'; // For IconButton actions
+import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 
 interface SalaryComponentListProps {
   components: SalaryComponent[];
@@ -29,9 +17,14 @@ interface SalaryComponentListProps {
 }
 
 const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit, onDelete, onToggleActive }) => {
+  // In a real app, you'd get these from a global context/store, e.g.:
+  // const { currentUser } = useAuth();
+  // const locale = currentUser.tenant.jurisdiction.locale;
+  // const currency = currentUser.tenant.jurisdiction.currency;
+  const locale = 'fr-MA'; // Simulating for now
+  const currency = 'MAD';   // Simulating for now
+
   if (!components || components.length === 0) {
-    // This is a basic way to handle no components.
-    // The parent page (SalaryComponentsPage) might have a more elaborate empty state.
     return null;
   }
 
@@ -76,8 +69,10 @@ const SalaryComponentList: FC<SalaryComponentListProps> = ({ components, onEdit,
                   ? 'Formula'
                   : formatFinancialValue(
                       component.calculation_type === 'fixed' ? component.amount : component.percentage,
-                      component.calculation_type, // This will be 'fixed' or 'percentage' here
-                      // currency can be omitted to use default 'USD'
+                      component.calculation_type,
+                      // ACTION: Pass the locale and currency to the formatter
+                      locale,
+                      currency
                     )}
               </Td>
               <Td>{component.is_taxable ? 'Yes' : 'No'}</Td>

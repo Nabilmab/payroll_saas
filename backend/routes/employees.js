@@ -30,7 +30,7 @@ router.post(
     check('firstName', 'First name is required').not().isEmpty(),
     check('lastName', 'Last name is required').not().isEmpty(),
     check('email', 'A valid email is required').isEmail(),
-    check('departmentId', 'Department ID is required').isUUID(),
+    check('departmentId', 'Department ID is required').not().isEmpty(), // Also changed to not().isEmpty() for consistency with CUIDs
     check('jobTitle', 'Job title is required').not().isEmpty(),
     check('hireDate', 'Hire date is required').isISO8601().toDate(),
   ],
@@ -173,7 +173,8 @@ router.get('/:employeeId/salary-settings', async (req, res) => {
 router.post(
   '/:employeeId/salary-settings',
   [
-    check('salaryComponentId', 'Salary component is required').isUUID(),
+    // --- FIX APPLIED HERE ---
+    check('salaryComponentId', 'Salary component is required').not().isEmpty(),
     check('effectiveDate', 'Effective date is required').isISO8601().toDate(),
   ],
   async (req, res) => {
@@ -185,12 +186,20 @@ router.post(
     const { salaryComponentId, effectiveDate, amount, percentage } = req.body;
 
     try {
-        const [employee, salaryComponent] = await Promise.all([
-            prisma.employee.findFirst({ where: { id: employeeId, tenantId } }),
-            prisma.salaryComponent.findFirst({ where: { id: salaryComponentId, tenantId } })
-        ]);
+        const salaryComponent = await prisma.salaryComponent.findFirst({
+            where: {
+              id: salaryComponentId,
+              // Component must belong to the tenant OR be a system-level component for the tenant's jurisdiction
+              OR: [
+                { tenantId: tenantId },
+                { jurisdictionId: req.user.tenant.jurisdictionId }
+              ]
+            }
+        });
+        const employee = await prisma.employee.findFirst({ where: { id: employeeId, tenantId } });
+
         if (!employee) return res.status(404).json({ error: 'Employee not found.' });
-        if (!salaryComponent) return res.status(404).json({ error: 'Salary Component not found.' });
+        if (!salaryComponent) return res.status(404).json({ error: 'Salary Component not found or not accessible by this tenant.' });
 
         const newSetting = await prisma.employeeSalarySetting.create({
             data: { tenantId, employeeId, salaryComponentId, effectiveDate, amount, percentage, isActive: true },

@@ -1,44 +1,49 @@
-// backend/middleware/auth.js
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 
-// This is the real JWT authentication middleware.
 export const authenticateAndAttachUser = async (req, res, next) => {
-  // Get token from header
   const token = req.header('x-auth-token');
-
-  // Check if no token
   if (!token) {
     return res.status(401).json({ msg: 'No token, authorization denied' });
   }
 
-  // Verify token
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Find the user in the database using the ID from the token payload
     const user = await prisma.user.findUnique({
-      where: {
-        id: decoded.user.id,
-      },
-      // Include the user's roles for potential authorization checks later
+      where: { id: decoded.user.id },
       include: {
-        roles: {
+        tenants: {
+          where: { tenantId: decoded.user.tenantId },
           include: {
             role: true,
+            tenant: {
+              include: {
+                jurisdiction: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (!user) {
-      return res.status(401).json({ msg: 'Token is not valid' });
+    if (!user || user.tenants.length === 0) {
+      return res.status(401).json({ msg: 'Token is not valid or access has been revoked.' });
     }
 
-    // Attach the full user object to the request
-    // We can simplify this later, but for now, it's fine
-    req.user = user;
-    
+    const { tenants, ...userProfile } = user;
+    const activeTenantAccess = tenants[0];
+
+    const userForRequest = {
+      ...userProfile,
+      tenantId: activeTenantAccess.tenantId,
+      tenant: {
+        ...activeTenantAccess.tenant,
+        userRole: activeTenantAccess.role,
+      },
+    };
+
+    req.user = userForRequest;
     next();
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });

@@ -1,0 +1,19 @@
+{
+    "salaryComponents": {
+        "pageTitle": "Gérer les Composants de Salaire",
+        "addNew": "Ajouter un Nouveau Composant",
+        "loadingError": "Erreur de chargement des composants",
+        "loadingErrorDesc": "Échec de la récupération des composants de salaire.",
+        "addSuccess": "Composant Ajouté",
+        "addSuccessDesc": "Le composant \"{{name}}\" a été ajouté avec succès.",
+        "updateSuccess": "Composant Mis à Jour",
+        "updateSuccessDesc": "Le composant \"{{name}}\" a été mis à jour avec succès.",
+        "addFail": "Échec de l'Ajout",
+        "updateFail": "Échec de la Mise à Jour",
+        "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce composant de salaire ?",
+        "deleteSuccess": "Composant Supprimé",
+        "deleteSuccessDesc": "Le composant de salaire a été supprimé avec succès.",
+        "deleteFail": "Échec de la Suppression",
+        "noComponents": "Aucun composant de salaire trouvé. Cliquez sur \"Ajouter un Nouveau Composant\" pour commencer !"
+    }
+}

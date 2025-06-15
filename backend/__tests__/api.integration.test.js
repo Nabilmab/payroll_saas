@@ -1,68 +1,77 @@
-// backend/__tests__/api.integration.test.js
 import request from 'supertest';
 import app from '../server.js';
 import prisma from '../lib/prisma.js';
 import jwt from 'jsonwebtoken';
-import { jest } from '@jest/globals';
 
 describe('Payroll SaaS API Integration Tests (Prisma)', () => {
-  let token;
-  let techSolutionsTenant;
-  let ahmedBennani;
-  let baseSalaryComponent;
-  let itDepartment;
+  let token, techSolutionsTenant, ahmedBennani, baseSalaryComponent, itDepartment, testUser;
 
   beforeAll(async () => {
-    // ✅ FIX: Comprehensive cleanup in the correct order to avoid foreign key errors.
-    // Delete from tables that reference others first.
+    // Robust cleanup order
     await prisma.PayslipItem.deleteMany({});
     await prisma.Payslip.deleteMany({});
     await prisma.PayrollRun.deleteMany({});
     await prisma.EmployeeSalarySetting.deleteMany({});
     await prisma.Employee.deleteMany({});
+    await prisma.userTenantAccess.deleteMany({});
     await prisma.user.deleteMany({});
     await prisma.Department.deleteMany({});
+    await prisma.CalculationStep.deleteMany({});
+    await prisma.TaxBracket.deleteMany({});
     await prisma.SalaryComponent.deleteMany({});
     await prisma.PaySchedule.deleteMany({});
+    await prisma.Role.deleteMany({});
     await prisma.Tenant.deleteMany({});
+    await prisma.Jurisdiction.deleteMany({});
+
+    // Create test-specific data
+    const jurisdiction = await prisma.jurisdiction.create({
+      data: { id: 'MA_API', name: 'Morocco API Test', currency: 'MAD', locale: 'fr-MA' }
+    });
 
     techSolutionsTenant = await prisma.Tenant.create({
-      data: { name: "TechSolutions SARL Test API", schemaName: "techsolutions_test_api_integration" }
+      data: {
+        name: "TechSolutions SARL Test API",
+        schemaName: "techsolutions_test_api_integration",
+        jurisdictionId: jurisdiction.id,
+      }
     });
-
-    const testUser = await prisma.user.create({
+    
+    testUser = await prisma.user.create({
         data: {
             email: 'api.test.manager@company.com',
-            firstName: 'API',
-            lastName: 'Tester',
-            passwordHash: 'password',
-            tenantId: techSolutionsTenant.id,
+            firstName: 'API', lastName: 'Tester', passwordHash: 'password'
         }
     });
+    const role = await prisma.role.create({data: {name: 'admin', tenantId: techSolutionsTenant.id}});
+    await prisma.userTenantAccess.create({
+        data: { userId: testUser.id, tenantId: techSolutionsTenant.id, roleId: role.id }
+    });
 
-    const payload = { user: { id: testUser.id, tenantId: testUser.tenantId } };
+    const payload = { 
+        user: { 
+            id: testUser.id, 
+            tenantId: techSolutionsTenant.id,
+            roleId: role.id,
+            roleName: role.name
+        } 
+    };
     token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-    
+
     itDepartment = await prisma.Department.create({
       data: { name: "Information Technology API", tenantId: techSolutionsTenant.id }
     });
     baseSalaryComponent = await prisma.SalaryComponent.create({
       data: {
-        name: 'API Test Base Salary',
-        type: 'earning',
-        calculationType: 'fixed',
+        name: 'API Test Base Salary', type: 'earning', calculationType: 'fixed',
         tenantId: techSolutionsTenant.id,
       }
     });
     ahmedBennani = await prisma.Employee.create({
       data: {
-        firstName: 'Ahmed',
-        lastName: 'Bennani API',
-        email: 'ahmed.bennani.api.test@company.com',
-        jobTitle: 'Software Engineer',
-        hireDate: new Date(),
-        departmentId: itDepartment.id,
-        tenantId: techSolutionsTenant.id,
+        firstName: 'Ahmed', lastName: 'Bennani API', email: 'ahmed.bennani.api.test@company.com',
+        jobTitle: 'Software Engineer', hireDate: new Date(),
+        departmentId: itDepartment.id, tenantId: techSolutionsTenant.id,
       }
     });
   });
